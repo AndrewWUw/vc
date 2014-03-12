@@ -6,112 +6,113 @@ package VC.Scanner;
 
 import VC.ErrorReporter;
 
-public final class Scanner { 
+public final class Scanner {
 
-  private SourceFile sourceFile;
-  private boolean debug;
+	private SourceFile sourceFile;
+	private boolean debug;
 
-  private ErrorReporter errorReporter;
-  private StringBuffer currentSpelling;
-  private char currentChar;
-  private SourcePosition sourcePos;
+	private ErrorReporter errorReporter;
+	private StringBuffer currentSpelling;
+	private char currentChar;
+	private SourcePosition sourcePos;
 
-// =========================================================
+	// =========================================================
 
-  public Scanner(SourceFile source, ErrorReporter reporter) {
-    sourceFile = source;
-    errorReporter = reporter;
-    currentChar = sourceFile.getNextChar();
-    debug = false;
+	public Scanner(SourceFile source, ErrorReporter reporter) {
+		sourceFile = source;
+		errorReporter = reporter;
+		currentChar = sourceFile.getNextChar();
+		debug = false;
 
-    // you may initialise your counters for line and column numbers here
-  }
+		// you may initialise your counters for line and column numbers here
+	}
 
-  public void enableDebugging() {
-    debug = true;
-  }
+	public void enableDebugging() {
+		debug = true;
+	}
 
-  // accept gets the next character from the source program.
+	// accept gets the next character from the source program.
 
-  private void accept() {
+	private void accept() {
 
-    currentChar = sourceFile.getNextChar();
+		currentChar = sourceFile.getNextChar();
 
-  // you may save the lexeme of the current token incrementally here
-  // you may also increment your line and column counters here
-  }
+		// you may save the lexeme of the current token incrementally here
+		// you may also increment your line and column counters here
+	}
 
-  // inspectChar returns the n-th character after currentChar
-  // in the input stream. 
-  //
-  // If there are fewer than nthChar characters between currentChar 
-  // and the end of file marker, SourceFile.eof is returned.
-  // 
-  // Both currentChar and the current position in the input stream
-  // are *not* changed. Therefore, a subsequent call to accept()
-  // will always return the next char after currentChar.
+	// inspectChar returns the n-th character after currentChar
+	// in the input stream.
+	//
+	// If there are fewer than nthChar characters between currentChar
+	// and the end of file marker, SourceFile.eof is returned.
+	//
+	// Both currentChar and the current position in the input stream
+	// are *not* changed. Therefore, a subsequent call to accept()
+	// will always return the next char after currentChar.
 
-  private char inspectChar(int nthChar) {
-    return sourceFile.inspectChar(nthChar);
-  }
+	private char inspectChar(int nthChar) {
+		return sourceFile.inspectChar(nthChar);
+	}
 
-  private int nextToken() {
-  // Tokens: separators, operators, literals, identifiers and keyworods
-       
-    switch (currentChar) {
-       // separators 
-    case '(':
-	accept();
-	return Token.LPAREN;
-    case '.':
-        //  attempting to recognise a float
+	private int nextToken() {
+		// Tokens: separators, operators, literals, identifiers and keyworods
 
-    case '|':	
-       	accept();
-      	if (currentChar == '|') {
-           accept();
-	   return Token.OROR;
-      	} else {
-	   return Token.ERROR;
-        }
+		switch (currentChar) {
+		// separators
+		case '(':
+			accept();
+			return Token.LPAREN;
+		case '.':
+			// attempting to recognise a float
 
-    // ....
-    case SourceFile.eof:	
-	currentSpelling.append(Token.spell(Token.EOF));
-	return Token.EOF;
-    default:
-	break;
-    }
+		case '|':
+			accept();
+			if (currentChar == '|') {
+				accept();
+				return Token.OROR;
+			} else {
+				return Token.ERROR;
+			}
 
-    accept(); 
-    return Token.ERROR;
-  }
+			// ....
+		case SourceFile.eof:
+			currentSpelling.append(Token.spell(Token.EOF));
+			return Token.EOF;
+		default:
+			break;
+		}
 
-  void skipSpaceAndComments() {
-  }
+		accept();
+		return Token.ERROR;
+	}
 
-  public Token getToken() {
-    Token tok;
-    int kind;
+	void skipSpaceAndComments() {
 
-    // skip white space and comments
+	}
 
-   skipSpaceAndComments();
+	public Token getToken() {
+		Token tok;
+		int kind;
 
-   currentSpelling = new StringBuffer("");
+		// skip white space and comments
 
-   sourcePos = new SourcePosition();
+		skipSpaceAndComments();
 
-   // You must record the position of the current token somehow
+		currentSpelling = new StringBuffer("");
 
-   kind = nextToken();
+		sourcePos = new SourcePosition();
 
-   tok = new Token(kind, currentSpelling.toString(), sourcePos);
+		// You must record the position of the current token somehow
 
-   // * do not remove these three lines
-   if (debug)
-     System.out.println(tok);
-   return tok;
-   }
+		kind = nextToken();
+
+		tok = new Token(kind, currentSpelling.toString(), sourcePos);
+
+		// * do not remove these three lines
+		if (debug)
+			System.out.println(tok);
+		return tok;
+	}
 
 }

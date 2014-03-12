@@ -55,12 +55,12 @@ public final class Token extends Object {
     // reserved words - must be in alphabetical order...
     BOOLEAN		= 0,
     BREAK		= 1,
-    CONTINUE		= 2,
+    CONTINUE	= 2,
     ELSE		= 3,
     FLOAT 		= 4,
-    FOR                 = 5,
+    FOR         = 5,
     IF			= 6,
-    INT                 = 7,
+    INT         = 7,
     RETURN		= 8,
     VOID		= 9,
     WHILE		= 10,
@@ -86,9 +86,9 @@ public final class Token extends Object {
     RCURLY		= 26,
     LPAREN		= 27,
     RPAREN		= 28,
-    LBRACKET 		= 29,
-    RBRACKET            = 30,
-    SEMICOLON		= 31,
+    LBRACKET 	= 29,
+    RBRACKET    = 30,
+    SEMICOLON	= 31,
     COMMA		= 32,
 
     // identifiers
