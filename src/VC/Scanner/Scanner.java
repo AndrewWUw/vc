@@ -25,6 +25,12 @@ public final class Scanner {
 		debug = false;
 
 		// you may initialise your counters for line and column numbers here
+		sourcePos = new SourcePosition();
+		sourcePos.lineStart++;
+		sourcePos.lineFinish++;
+		sourcePos.charStart++;
+		sourcePos.charFinish++;
+		// System.out.println(sourcePos.toString());
 	}
 
 	public void enableDebugging() {
@@ -87,8 +93,56 @@ public final class Scanner {
 		return Token.ERROR;
 	}
 
+	
 	void skipSpaceAndComments() {
+		int skip = 0;
+		int lineOffset = 0;
+		System.out.println("CurrentChar: " + currentChar);
+		if (currentChar == ' ') {
+			skip++;
+		} else if (currentChar == '/') {
+			int nthChar = 2;
+			System.out.println("nextChar: " + inspectChar(1));
+			if (inspectChar(1) == '/') {
+				System.out.println("nextNChar: " + inspectChar(nthChar));
 
+				while (inspectChar(nthChar) != '\n') {
+					skip++;
+					nthChar++;
+				}
+				lineOffset++;
+				// updateSourcePosition(1, 0, 0);
+			} else if (inspectChar(1) == '*') {
+				while (inspectChar(nthChar) != '*'
+						&& inspectChar(nthChar + 1) != '/') {
+					System.out.println("nextNChar: " + inspectChar(nthChar)
+							+ " n= " + nthChar);
+
+					if (inspectChar(nthChar) == '\n') {
+						lineOffset++;
+						// updateSourcePosition(1, 0, 0);
+					}
+					skip++;
+					nthChar++;
+				}
+				skip = skip + 2;
+			}
+		}
+
+		// skip the next 'skip' chars
+		for (int i = 0; i < skip; i++) {
+			sourceFile.getNextChar();
+		}
+		updateSourcePosition(lineOffset, 0, skip);
+
+	}
+
+	private void updateSourcePosition(int lineNumOffset, int charStartOffset,
+			int charFinishOffset) {
+		sourcePos.lineStart += lineNumOffset;
+		sourcePos.lineFinish += lineNumOffset;
+		sourcePos.charStart += charStartOffset;
+		sourcePos.charFinish += charFinishOffset;
 	}
 
 	public Token getToken() {
@@ -101,8 +155,6 @@ public final class Scanner {
 
 		currentSpelling = new StringBuffer("");
 
-		sourcePos = new SourcePosition();
-
 		// You must record the position of the current token somehow
 
 		kind = nextToken();
@@ -113,6 +165,22 @@ public final class Scanner {
 		if (debug)
 			System.out.println(tok);
 		return tok;
+	}
+
+	private void setLineStart(int lineStart) {
+		sourcePos.lineStart = lineStart;
+	}
+
+	private void setLineFinish(int lineFinish) {
+		sourcePos.lineFinish = lineFinish;
+	}
+
+	private void setCharStart(int charStart) {
+		sourcePos.charStart = charStart;
+	}
+
+	private void setCharFinish(int charFinish) {
+		sourcePos.charFinish = charFinish;
 	}
 
 }
