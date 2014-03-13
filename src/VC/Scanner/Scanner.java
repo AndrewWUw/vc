@@ -69,6 +69,28 @@ public final class Scanner {
 		case '(':
 			accept();
 			return Token.LPAREN;
+		case '{':
+			accept();
+			return Token.LCURLY;
+		case '[':
+			accept();
+			return Token.LBRACKET;
+		case ')':
+			accept();
+			return Token.RPAREN;
+		case '}':
+			accept();
+			return Token.RCURLY;
+		case ']':
+			accept();
+			return Token.RBRACKET;
+		case ';':
+			accept();
+			return Token.SEMICOLON;
+		case ',':
+			accept();
+			return Token.COMMA;
+
 		case '.':
 			// attempting to recognise a float
 
@@ -80,6 +102,54 @@ public final class Scanner {
 			} else {
 				return Token.ERROR;
 			}
+
+			// operators
+		case '+':
+			accept();
+			return Token.PLUS;
+		case '-':
+			accept();
+			return Token.MINUS;
+			// identifiers
+		case '*':
+			accept();
+			return Token.MULT;
+			// keywords
+		case '/':
+			accept();
+			return Token.DIV;
+		case '!':
+			accept();
+			if (currentChar == '=') {
+				accept();
+				return Token.NOTEQ;
+			} else {
+				return Token.NOT;
+			}
+		case '=':
+			accept();
+			return Token.ERROR;
+		case '/':
+			accept();
+			return Token.ERROR;
+		case '/':
+			accept();
+			return Token.ERROR;
+
+			// NOTEQ = 16,
+			// EQ = 17,
+			// EQEQ = 18,
+			// LT = 19,
+			// LTEQ = 20,
+			// GT = 21,
+			// GTEQ = 22,
+			// ANDAND = 23,
+			// OROR = 24,
+
+			// literals
+		case '/':
+			accept();
+			return Token.ERROR;
 
 			// ....
 		case SourceFile.eof:
@@ -93,12 +163,11 @@ public final class Scanner {
 		return Token.ERROR;
 	}
 
-	
 	void skipSpaceAndComments() {
 		int skip = 0;
 		int lineOffset = 0;
 		System.out.println("CurrentChar: " + currentChar);
-		if (currentChar == ' ') {
+		if (currentChar == ' ' || currentChar == '\t') {
 			skip++;
 		} else if (currentChar == '/') {
 			int nthChar = 2;

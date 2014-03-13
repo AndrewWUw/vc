@@ -21,7 +21,8 @@ public class vc {
 
 	public static void main(String[] args) {
 		inputFilename = args[0];
-
+		
+		// System.out.println("asdfas" + '\t' + "====");
 		System.out.println("======= The VC compiler =======");
 
 		SourceFile source = new SourceFile(inputFilename);
