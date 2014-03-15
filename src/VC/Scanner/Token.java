@@ -44,9 +44,9 @@ public final class Token extends Object {
   }
 
   public String toString() {
-    return "Kind = " + kind + " [" + spell(kind) + 
-          "], spelling = \"" + spelling + "\", position = " + position;
-  }
+		return "Kind = " + kind + " [" + spell(kind) + "], spelling = \""
+				+ spelling + "\", position = " + position;
+	}
 
   // Token classes...
 
@@ -148,6 +148,6 @@ public final class Token extends Object {
     "$"
   };
 
-    private final static int      firstReservedWord = Token.BOOLEAN,
-    			          lastReservedWord  = Token.WHILE;
+    private final static int firstReservedWord = Token.BOOLEAN,
+    			          	 lastReservedWord  = Token.WHILE;
 }

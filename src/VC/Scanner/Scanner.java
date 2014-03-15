@@ -47,6 +47,13 @@ public final class Scanner {
 		// you may also increment your line and column counters here
 	}
 
+	private void accept(int num) {
+		for (int i = 0; i < num; i++) {
+			currentChar = sourceFile.getNextChar();
+
+		}
+	}
+
 	// inspectChar returns the n-th character after currentChar
 	// in the input stream.
 	//
@@ -64,109 +71,201 @@ public final class Scanner {
 	private int nextToken() {
 		// Tokens: separators, operators, literals, identifiers and keyworods
 
-		switch (currentChar) {
-		// separators
-		case '(':
-			accept();
-			return Token.LPAREN;
-		case '{':
-			accept();
-			return Token.LCURLY;
-		case '[':
-			accept();
-			return Token.LBRACKET;
-		case ')':
-			accept();
-			return Token.RPAREN;
-		case '}':
-			accept();
-			return Token.RCURLY;
-		case ']':
-			accept();
-			return Token.RBRACKET;
-		case ';':
-			accept();
-			return Token.SEMICOLON;
-		case ',':
-			accept();
-			return Token.COMMA;
+		// literals
 
-		case '.':
-			// attempting to recognise a float
-
-		case '|':
+		if (currentChar <= '9' && currentChar >= '0') {
+			// accept();
+			return digitHandler();
+		} else if (currentChar <= 'z' && currentChar >= 'A') {
 			accept();
-			if (currentChar == '|') {
+			return Token.ID;
+		} else {
+			switch (currentChar) {
+			// separators
+			case '(':
 				accept();
-				return Token.OROR;
-			} else {
-				return Token.ERROR;
-			}
-
-			// operators
-		case '+':
-			accept();
-			return Token.PLUS;
-		case '-':
-			accept();
-			return Token.MINUS;
-			// identifiers
-		case '*':
-			accept();
-			return Token.MULT;
-			// keywords
-		case '/':
-			accept();
-			return Token.DIV;
-		case '!':
-			accept();
-			if (currentChar == '=') {
+				return Token.LPAREN;
+			case '{':
 				accept();
-				return Token.NOTEQ;
-			} else {
-				return Token.NOT;
+				return Token.LCURLY;
+			case '[':
+				accept();
+				return Token.LBRACKET;
+			case ')':
+				accept();
+				return Token.RPAREN;
+			case '}':
+				accept();
+				return Token.RCURLY;
+			case ']':
+				accept();
+				return Token.RBRACKET;
+			case ';':
+				accept();
+				return Token.SEMICOLON;
+			case ',':
+				accept();
+				return Token.COMMA;
+
+			case '.':
+				accept(inspectDigit());
+				
+				return Token.FLOATLITERAL;
+
+				// operators
+			case '+':
+				accept();
+				return Token.PLUS;
+			case '-':
+				accept();
+				return Token.MINUS;
+				// identifiers
+			case '*':
+				accept();
+				return Token.MULT;
+				// keywords
+			case '/':
+				accept();
+				return Token.DIV;
+			case '!':
+				accept();
+				if (currentChar == '=') {
+					accept();
+					return Token.NOTEQ;
+				} else {
+					return Token.NOT;
+				}
+			case '=':
+				accept();
+				if (currentChar == '=') {
+					accept();
+					return Token.EQEQ;
+				} else {
+					return Token.EQ;
+				}
+			case '<':
+				accept();
+				if (currentChar == '=') {
+					accept();
+					return Token.LTEQ;
+				} else {
+					return Token.LT;
+				}
+			case '>':
+				accept();
+				if (currentChar == '=') {
+					accept();
+					return Token.GTEQ;
+				} else {
+					return Token.GT;
+				}
+			case '&':
+				accept();
+				if (currentChar == '&') {
+					accept();
+					return Token.ANDAND;
+				} else {
+					return Token.ERROR;
+				}
+			case '|':
+				accept();
+				if (currentChar == '|') {
+					accept();
+					return Token.OROR;
+				} else {
+					return Token.ERROR;
+				}
+				
+				
+//			case '\n':
+//				accept();
+//				return Token.ERROR;
+
+				// ....
+			case SourceFile.eof:
+				currentSpelling.append(Token.spell(Token.EOF));
+				return Token.EOF;
+			default:
+				break;
 			}
-		case '=':
-			accept();
-			return Token.ERROR;
-		case '/':
-			accept();
-			return Token.ERROR;
-		case '/':
-			accept();
-			return Token.ERROR;
-
-			// NOTEQ = 16,
-			// EQ = 17,
-			// EQEQ = 18,
-			// LT = 19,
-			// LTEQ = 20,
-			// GT = 21,
-			// GTEQ = 22,
-			// ANDAND = 23,
-			// OROR = 24,
-
-			// literals
-		case '/':
-			accept();
-			return Token.ERROR;
-
-			// ....
-		case SourceFile.eof:
-			currentSpelling.append(Token.spell(Token.EOF));
-			return Token.EOF;
-		default:
-			break;
 		}
-
 		accept();
 		return Token.ERROR;
+	}
+
+	private int digitHandler() {
+		int num = inspectDigit();
+		accept(num);
+
+		// handle exponent
+		if (currentChar == '.' || currentChar == 'e' || currentChar == 'E') {
+			accept();
+			accept(inspectDigit() + 1);
+			if (currentChar == 'e' || currentChar == 'E') {
+				accept();
+				// e.g. 1.e+5,1.e5
+				if (currentChar == '+' || currentChar == '-') {
+					accept();
+					if (currentChar <= '9' && currentChar >= '0') {
+						accept();
+						return Token.FLOATLITERAL;
+					} else {
+						return Token.ERROR;
+					}
+				}
+			}
+			accept(inspectDigit() + 1);
+			return Token.FLOATLITERAL;
+		} else if (currentChar == 'e' || currentChar == 'E') {
+			// e.g. 1e+5, 1e5
+			accept();
+			if (currentChar == '+' || currentChar == '-') {
+				accept();
+				if (currentChar <= '9' && currentChar >= '0') {
+					accept();
+					return Token.FLOATLITERAL;
+				} else {
+					return Token.ERROR;
+				}
+			}
+		} else {
+			return Token.INTLITERAL;
+		}
+		return Token.ERROR;
+		// switch (currentChar) {
+		// case '.':
+		// accept(inspectDigit() + 1);
+		// return Token.FLOATLITERAL;
+		// case 'e':
+		// case 'E':
+		// accept();
+		// if (currentChar == '+' || currentChar == '-') {
+		// accept();
+		// if (currentChar <= '9' && currentChar >= '0') {
+		// accept(inspectDigit() + 1);
+		// return Token.FLOATLITERAL;
+		// } else {
+		// return Token.ERROR;
+		// }
+		//
+		// }
+		// }
+	}
+
+	private int inspectDigit() {
+		int counter = 1;
+		// accept();
+		while (inspectChar(counter) <= '9' && inspectChar(counter) >= '0' && inspectChar(counter) != '\u0000') {
+			counter++;
+		}
+
+		return counter;
 	}
 
 	void skipSpaceAndComments() {
 		int skip = 0;
 		int lineOffset = 0;
-		System.out.println("CurrentChar: " + currentChar);
+//		System.out.println("CurrentChar: " + currentChar);
 		if (currentChar == ' ' || currentChar == '\t') {
 			skip++;
 		} else if (currentChar == '/') {
