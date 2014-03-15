@@ -41,17 +41,28 @@ public final class Scanner {
 
 	private void accept() {
 
-		currentChar = sourceFile.getNextChar();
-
 		// you may save the lexeme of the current token incrementally here
 		// you may also increment your line and column counters here
+		if (currentChar != '\n') {
+			currentSpelling.append(currentChar);
+			sourcePos.charFinish++;
+		} else {
+			sourcePos.lineStart++;
+			sourcePos.lineFinish++;
+			sourcePos.charStart = 1;
+			sourcePos.charFinish = 1;
+		}
+		currentChar = sourceFile.getNextChar();
+
 	}
 
 	private void accept(int num) {
 		for (int i = 0; i < num; i++) {
+			currentSpelling.append(currentChar);
 			currentChar = sourceFile.getNextChar();
-
+			sourcePos.charFinish++;
 		}
+
 	}
 
 	// inspectChar returns the n-th character after currentChar
@@ -109,7 +120,7 @@ public final class Scanner {
 
 			case '.':
 				accept(inspectDigit());
-				
+
 				return Token.FLOATLITERAL;
 
 				// operators
@@ -175,11 +186,10 @@ public final class Scanner {
 				} else {
 					return Token.ERROR;
 				}
-				
-				
-//			case '\n':
-//				accept();
-//				return Token.ERROR;
+
+				// case '\n':
+				// accept();
+				// return Token.ERROR;
 
 				// ....
 			case SourceFile.eof:
@@ -200,7 +210,7 @@ public final class Scanner {
 		// handle exponent
 		if (currentChar == '.' || currentChar == 'e' || currentChar == 'E') {
 			accept();
-			accept(inspectDigit() + 1);
+			accept(inspectDigit());
 			if (currentChar == 'e' || currentChar == 'E') {
 				accept();
 				// e.g. 1.e+5,1.e5
@@ -214,7 +224,7 @@ public final class Scanner {
 					}
 				}
 			}
-			accept(inspectDigit() + 1);
+			accept(inspectDigit());
 			return Token.FLOATLITERAL;
 		} else if (currentChar == 'e' || currentChar == 'E') {
 			// e.g. 1e+5, 1e5
@@ -255,7 +265,9 @@ public final class Scanner {
 	private int inspectDigit() {
 		int counter = 1;
 		// accept();
-		while (inspectChar(counter) <= '9' && inspectChar(counter) >= '0' && inspectChar(counter) != '\u0000') {
+		char c = inspectChar(counter);
+		while (inspectChar(counter) <= '9' && inspectChar(counter) >= '0'
+				&& inspectChar(counter) != '\u0000') {
 			counter++;
 		}
 
@@ -265,7 +277,7 @@ public final class Scanner {
 	void skipSpaceAndComments() {
 		int skip = 0;
 		int lineOffset = 0;
-//		System.out.println("CurrentChar: " + currentChar);
+		// System.out.println("CurrentChar: " + currentChar);
 		if (currentChar == ' ' || currentChar == '\t') {
 			skip++;
 		} else if (currentChar == '/') {
@@ -351,4 +363,11 @@ public final class Scanner {
 		sourcePos.charFinish = charFinish;
 	}
 
+	public StringBuffer getCurrentSpelling() {
+		return currentSpelling;
+	}
+
+	public void setCurrentSpelling(StringBuffer currentSpelling) {
+		this.currentSpelling = currentSpelling;
+	}
 }
