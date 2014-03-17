@@ -181,11 +181,6 @@ public final class Scanner {
 					return Token.ERROR;
 				}
 
-				// case '\n':
-				// accept();
-				// break;
-				// return Token.ERROR;
-
 				// ....
 			case SourceFile.eof:
 				currentSpelling.append(Token.spell(Token.EOF));
@@ -203,9 +198,12 @@ public final class Scanner {
 		accept(num);
 
 		// handle exponent
-		if (currentChar == '.' || currentChar == 'e' || currentChar == 'E') {
+		// if (currentChar == '.' || currentChar == 'e' || currentChar == 'E') {
+		if (currentChar == '.') {
 			accept();
-			accept(inspectDigit());
+			if (currentChar <= '9' && currentChar >= '0') {
+				accept(inspectDigit());
+			}
 			if (currentChar == 'e' || currentChar == 'E') {
 				accept(1);
 				// e.g. 1.e+5,1.e5
@@ -219,15 +217,22 @@ public final class Scanner {
 					return Token.ERROR;
 				}
 			}
+			// if (currentChar == '+' || currentChar == '-') {
+			// accept(1);
+			// if (currentChar <= '9' && currentChar >= '0') {
 			// accept(inspectDigit());
-			return Token.FLOATLITERAL;
+			// return Token.FLOATLITERAL;
+			// } else {
+			// return Token.ERROR;
+			// } // accept(inspectDigit());
+			// }
 		} else if (currentChar == 'e' || currentChar == 'E') {
 			// e.g. 1e+5, 1e5
-			accept();
+			accept(1);
 			if (currentChar == '+' || currentChar == '-') {
-				accept();
+				accept(1);
 				if (currentChar <= '9' && currentChar >= '0') {
-					accept();
+					accept(inspectDigit());
 					return Token.FLOATLITERAL;
 				} else {
 					return Token.ERROR;
@@ -260,7 +265,6 @@ public final class Scanner {
 	// Count the number of digits
 	private int inspectDigit() {
 		int counter = 1;
-		// System.out.println(inspectChar(counter));
 		while (inspectChar(counter) <= '9' && inspectChar(counter) >= '0'
 				&& inspectChar(counter) != '\u0000') {
 			counter++;
@@ -280,6 +284,12 @@ public final class Scanner {
 				skip++;
 			}
 		}
+
+		if (currentChar == '\n') {
+			accept(1);
+		}
+
+		// Comments handler
 		if (currentChar == '/') {
 			int nthChar = 2;
 			System.out.println("nextChar: " + inspectChar(1));
