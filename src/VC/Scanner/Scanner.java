@@ -15,6 +15,9 @@ public final class Scanner {
 	private StringBuffer currentSpelling;
 	private char currentChar;
 	private SourcePosition sourcePos;
+	private int linePos;
+	private int charPos;
+	private int charLength;
 
 	// =========================================================
 
@@ -25,12 +28,9 @@ public final class Scanner {
 		debug = false;
 
 		// you may initialise your counters for line and column numbers here
-		sourcePos = new SourcePosition();
-		sourcePos.lineStart++;
-		sourcePos.lineFinish++;
-		sourcePos.charStart++;
-		sourcePos.charFinish++;
-		// System.out.println(sourcePos.toString());
+		linePos = 1;
+		charPos = 1;
+		charLength = 0;
 	}
 
 	public void enableDebugging() {
@@ -38,42 +38,40 @@ public final class Scanner {
 	}
 
 	// accept gets the next character from the source program.
-
 	private void accept() {
-
 		// you may save the lexeme of the current token incrementally here
 		// you may also increment your line and column counters here
 		if (currentChar != '\n') {
 			currentSpelling.append(currentChar);
-			sourcePos.charFinish++;
+			// sourcePos.charFinish++;
+			charPos++;
 		} else {
 			sourcePos.lineStart++;
 			sourcePos.lineFinish++;
 			sourcePos.charStart = 1;
 			sourcePos.charFinish = 1;
+			linePos++;
+			charPos = 1;
 		}
 		currentChar = sourceFile.getNextChar();
 
 	}
 
 	private void accept(int num) {
-		for (int i = 0; i < num; i++) {
-			currentSpelling.append(currentChar);
-			currentChar = sourceFile.getNextChar();
-			sourcePos.charFinish++;
-		}
-
+		for (int i = 1; i <= num; i++)
+			accept();
+		sourcePos.charFinish += num;
 	}
 
-	// inspectChar returns the n-th character after currentChar
-	// in the input stream.
+	// inspectChar returns the n-th character after currentChar in the input
+	// stream.
 	//
-	// If there are fewer than nthChar characters between currentChar
-	// and the end of file marker, SourceFile.eof is returned.
+	// If there are fewer than nthChar characters between currentChar and the
+	// end of file marker, SourceFile.eof is returned.
 	//
-	// Both currentChar and the current position in the input stream
-	// are *not* changed. Therefore, a subsequent call to accept()
-	// will always return the next char after currentChar.
+	// Both currentChar and the current position in the input stream are *not*
+	// changed. Therefore, a subsequent call to accept() will always return the
+	// next char after currentChar.
 
 	private char inspectChar(int nthChar) {
 		return sourceFile.inspectChar(nthChar);
@@ -83,105 +81,101 @@ public final class Scanner {
 		// Tokens: separators, operators, literals, identifiers and keyworods
 
 		// literals
-
 		if (currentChar <= '9' && currentChar >= '0') {
 			// accept();
 			return digitHandler();
 		} else if (currentChar <= 'z' && currentChar >= 'A') {
-			accept();
+			accept(1);
 			return Token.ID;
 		} else {
 			switch (currentChar) {
 			// separators
 			case '(':
-				accept();
+				accept(1);
 				return Token.LPAREN;
 			case '{':
-				accept();
+				accept(1);
 				return Token.LCURLY;
 			case '[':
-				accept();
+				accept(1);
 				return Token.LBRACKET;
 			case ')':
-				accept();
+				accept(1);
 				return Token.RPAREN;
 			case '}':
-				accept();
+				accept(1);
 				return Token.RCURLY;
 			case ']':
-				accept();
+				accept(1);
 				return Token.RBRACKET;
 			case ';':
-				accept();
+				accept(1);
 				return Token.SEMICOLON;
 			case ',':
-				accept();
+				accept(1);
 				return Token.COMMA;
 
 			case '.':
-				accept(inspectDigit());
-
-				return Token.FLOATLITERAL;
-
+				return digitHandler();
 				// operators
 			case '+':
-				accept();
+				accept(1);
 				return Token.PLUS;
 			case '-':
-				accept();
+				accept(1);
 				return Token.MINUS;
 				// identifiers
 			case '*':
-				accept();
+				accept(1);
 				return Token.MULT;
 				// keywords
 			case '/':
-				accept();
+				accept(1);
 				return Token.DIV;
 			case '!':
-				accept();
+				accept(1);
 				if (currentChar == '=') {
-					accept();
+					accept(1);
 					return Token.NOTEQ;
 				} else {
 					return Token.NOT;
 				}
 			case '=':
-				accept();
+				accept(1);
 				if (currentChar == '=') {
-					accept();
+					accept(1);
 					return Token.EQEQ;
 				} else {
 					return Token.EQ;
 				}
 			case '<':
-				accept();
+				accept(1);
 				if (currentChar == '=') {
-					accept();
+					accept(1);
 					return Token.LTEQ;
 				} else {
 					return Token.LT;
 				}
 			case '>':
-				accept();
+				accept(1);
 				if (currentChar == '=') {
-					accept();
+					accept(1);
 					return Token.GTEQ;
 				} else {
 					return Token.GT;
 				}
 			case '&':
-				accept();
+				accept(1);
 				if (currentChar == '&') {
-					accept();
+					accept(1);
 					return Token.ANDAND;
 				} else {
 					return Token.ERROR;
 				}
 			case '|':
-				accept();
+				accept(1);
 				if (currentChar == '|') {
-					accept();
+					accept(1);
 					return Token.OROR;
 				} else {
 					return Token.ERROR;
@@ -189,6 +183,7 @@ public final class Scanner {
 
 				// case '\n':
 				// accept();
+				// break;
 				// return Token.ERROR;
 
 				// ....
@@ -212,19 +207,19 @@ public final class Scanner {
 			accept();
 			accept(inspectDigit());
 			if (currentChar == 'e' || currentChar == 'E') {
-				accept();
+				accept(1);
 				// e.g. 1.e+5,1.e5
 				if (currentChar == '+' || currentChar == '-') {
-					accept();
-					if (currentChar <= '9' && currentChar >= '0') {
-						accept();
-						return Token.FLOATLITERAL;
-					} else {
-						return Token.ERROR;
-					}
+					accept(1);
+				}
+				if (currentChar <= '9' && currentChar >= '0') {
+					accept(inspectDigit());
+					return Token.FLOATLITERAL;
+				} else {
+					return Token.ERROR;
 				}
 			}
-			accept(inspectDigit());
+			// accept(inspectDigit());
 			return Token.FLOATLITERAL;
 		} else if (currentChar == 'e' || currentChar == 'E') {
 			// e.g. 1e+5, 1e5
@@ -262,15 +257,14 @@ public final class Scanner {
 		// }
 	}
 
+	// Count the number of digits
 	private int inspectDigit() {
 		int counter = 1;
-		// accept();
-		char c = inspectChar(counter);
+		// System.out.println(inspectChar(counter));
 		while (inspectChar(counter) <= '9' && inspectChar(counter) >= '0'
 				&& inspectChar(counter) != '\u0000') {
 			counter++;
 		}
-
 		return counter;
 	}
 
@@ -279,8 +273,14 @@ public final class Scanner {
 		int lineOffset = 0;
 		// System.out.println("CurrentChar: " + currentChar);
 		if (currentChar == ' ' || currentChar == '\t') {
+			// skip space & tab
 			skip++;
-		} else if (currentChar == '/') {
+			while ((inspectChar(skip) == ' ' || inspectChar(skip) == '\t')
+					&& currentChar != '\u0000') {
+				skip++;
+			}
+		}
+		if (currentChar == '/') {
 			int nthChar = 2;
 			System.out.println("nextChar: " + inspectChar(1));
 			if (inspectChar(1) == '/') {
@@ -309,11 +309,11 @@ public final class Scanner {
 			}
 		}
 
-		// skip the next 'skip' chars
+		// skip to the next 'skip' chars
 		for (int i = 0; i < skip; i++) {
-			sourceFile.getNextChar();
+			currentChar = sourceFile.getNextChar();
 		}
-		updateSourcePosition(lineOffset, 0, skip);
+		updateSourcePosition(lineOffset, skip, skip);
 
 	}
 
@@ -329,15 +329,23 @@ public final class Scanner {
 		Token tok;
 		int kind;
 
-		// skip white space and comments
+		// Init for new sourcePosition
+		sourcePos = new SourcePosition();
+		sourcePos.lineStart = linePos;
+		sourcePos.lineFinish = linePos;
+		sourcePos.charStart = charPos;
+		sourcePos.charFinish = charPos;
+		// System.out.println(sourcePos.toString());
 
+		// skip white space and comments
 		skipSpaceAndComments();
 
 		currentSpelling = new StringBuffer("");
-
 		// You must record the position of the current token somehow
 
 		kind = nextToken();
+		linePos = sourcePos.lineStart;
+		charPos = sourcePos.charFinish;
 
 		tok = new Token(kind, currentSpelling.toString(), sourcePos);
 
@@ -347,27 +355,11 @@ public final class Scanner {
 		return tok;
 	}
 
-	private void setLineStart(int lineStart) {
-		sourcePos.lineStart = lineStart;
-	}
-
-	private void setLineFinish(int lineFinish) {
-		sourcePos.lineFinish = lineFinish;
-	}
-
-	private void setCharStart(int charStart) {
-		sourcePos.charStart = charStart;
-	}
-
-	private void setCharFinish(int charFinish) {
-		sourcePos.charFinish = charFinish;
-	}
-
-	public StringBuffer getCurrentSpelling() {
-		return currentSpelling;
-	}
-
-	public void setCurrentSpelling(StringBuffer currentSpelling) {
-		this.currentSpelling = currentSpelling;
-	}
+	// public StringBuffer getCurrentSpelling() {
+	// return currentSpelling;
+	// }
+	//
+	// public void setCurrentSpelling(StringBuffer currentSpelling) {
+	// this.currentSpelling = currentSpelling;
+	// }
 }
