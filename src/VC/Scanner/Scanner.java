@@ -82,11 +82,9 @@ public final class Scanner {
 
 		// literals
 		if (currentChar <= '9' && currentChar >= '0') {
-			// accept();
 			return digitHandler();
 		} else if (currentChar <= 'z' && currentChar >= 'A') {
-			accept(1);
-			return Token.ID;
+			return idHandler();
 		} else {
 			switch (currentChar) {
 			// separators
@@ -193,6 +191,13 @@ public final class Scanner {
 		return Token.ERROR;
 	}
 
+	private int idHandler() {
+		int num = inspectLetter();
+		accept(num);
+
+		return Token.ERROR;
+	}
+
 	private int digitHandler() {
 		int num = inspectDigit();
 		accept(num);
@@ -217,15 +222,6 @@ public final class Scanner {
 					return Token.ERROR;
 				}
 			}
-			// if (currentChar == '+' || currentChar == '-') {
-			// accept(1);
-			// if (currentChar <= '9' && currentChar >= '0') {
-			// accept(inspectDigit());
-			// return Token.FLOATLITERAL;
-			// } else {
-			// return Token.ERROR;
-			// } // accept(inspectDigit());
-			// }
 		} else if (currentChar == 'e' || currentChar == 'E') {
 			// e.g. 1e+5, 1e5
 			accept(1);
@@ -269,6 +265,13 @@ public final class Scanner {
 				&& inspectChar(counter) != '\u0000') {
 			counter++;
 		}
+		return counter;
+	}
+
+	private int inspectLetter() {
+		int counter = 1;
+		while (inspectChar(counter) <= 'z' && inspectChar(counter) >= 'A')
+			counter++;
 		return counter;
 	}
 
