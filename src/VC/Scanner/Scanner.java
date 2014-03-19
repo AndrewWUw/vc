@@ -58,8 +58,10 @@ public final class Scanner {
 	}
 
 	private void accept(int num) {
-		for (int i = 1; i <= num; i++)
-			accept();
+		if (num >= 1) {
+			for (int i = 1; i <= num; i++)
+				accept();
+		}
 		sourcePos.charFinish += num;
 	}
 
@@ -80,12 +82,25 @@ public final class Scanner {
 	private int nextToken() {
 		// Tokens: separators, operators, literals, identifiers and keyworods
 
-		// literals
+		// digit literals
 		if (currentChar <= '9' && currentChar >= '0') {
 			return digitHandler();
-		} else if (currentChar <= 'z' && currentChar >= 'A') {
+		} else if ((currentChar <= 'z' && currentChar >= 'a')
+				|| (currentChar <= 'Z' && currentChar >= 'A')) {
+			// identifiers
 			return idHandler();
-		} else {
+		} else if (currentChar == '"') {
+			return stringHandler();
+		} else if (currentChar == '/') {
+			if (inspectChar(1) == '*' || inspectChar(1) == '/') {
+				skipSpaceAndComments();
+			} else {
+				accept(1);
+				return Token.DIV;
+			}
+		}
+
+		else {
 			switch (currentChar) {
 			// separators
 			case '(':
@@ -112,9 +127,9 @@ public final class Scanner {
 			case ',':
 				accept(1);
 				return Token.COMMA;
-
 			case '.':
 				return digitHandler();
+
 				// operators
 			case '+':
 				accept(1);
@@ -122,14 +137,9 @@ public final class Scanner {
 			case '-':
 				accept(1);
 				return Token.MINUS;
-				// identifiers
 			case '*':
 				accept(1);
 				return Token.MULT;
-				// keywords
-			case '/':
-				accept(1);
-				return Token.DIV;
 			case '!':
 				accept(1);
 				if (currentChar == '=') {
@@ -191,11 +201,36 @@ public final class Scanner {
 		return Token.ERROR;
 	}
 
-	private int idHandler() {
-		int num = inspectLetter();
-		accept(num);
+	private int stringHandler() {
+		int num = 1;
+		boolean endOfString = false;
+		char nextChar = inspectChar(num);
 
-		return Token.ERROR;
+		while (nextChar != '\n') {
+			if (nextChar != '"') {
+				num++;
+				nextChar = inspectChar(num);
+			}
+		}
+		accept(num);
+		return Token.STRINGLITERAL;
+	}
+
+	private int idHandler() {
+		int num = 1;
+		while ((inspectChar(num) <= '9' && inspectChar(num) >= '0')
+				|| (inspectChar(num) <= 'z' && inspectChar(num) >= 'a')
+				|| (inspectChar(num) <= 'Z' && inspectChar(num) >= 'A')
+				|| inspectChar(num) == '_') {
+			num++;
+		}
+		accept(num);
+		if (currentSpelling.toString().toLowerCase() == "true"
+				|| currentSpelling.toString().toLowerCase() == "false") {
+			return Token.BOOLEANLITERAL;
+		} else {
+			return Token.ID;
+		}
 	}
 
 	private int digitHandler() {
@@ -203,7 +238,6 @@ public final class Scanner {
 		accept(num);
 
 		// handle exponent
-		// if (currentChar == '.' || currentChar == 'e' || currentChar == 'E') {
 		if (currentChar == '.') {
 			accept();
 			if (currentChar <= '9' && currentChar >= '0') {
@@ -238,24 +272,6 @@ public final class Scanner {
 			return Token.INTLITERAL;
 		}
 		return Token.ERROR;
-		// switch (currentChar) {
-		// case '.':
-		// accept(inspectDigit() + 1);
-		// return Token.FLOATLITERAL;
-		// case 'e':
-		// case 'E':
-		// accept();
-		// if (currentChar == '+' || currentChar == '-') {
-		// accept();
-		// if (currentChar <= '9' && currentChar >= '0') {
-		// accept(inspectDigit() + 1);
-		// return Token.FLOATLITERAL;
-		// } else {
-		// return Token.ERROR;
-		// }
-		//
-		// }
-		// }
 	}
 
 	// Count the number of digits
@@ -268,17 +284,8 @@ public final class Scanner {
 		return counter;
 	}
 
-	private int inspectLetter() {
-		int counter = 1;
-		while (inspectChar(counter) <= 'z' && inspectChar(counter) >= 'A')
-			counter++;
-		return counter;
-	}
-
-	void skipSpaceAndComments() {
+	private int spaceHandler() {
 		int skip = 0;
-		int lineOffset = 0;
-		// System.out.println("CurrentChar: " + currentChar);
 		if (currentChar == ' ' || currentChar == '\t') {
 			// skip space & tab
 			skip++;
@@ -287,47 +294,77 @@ public final class Scanner {
 				skip++;
 			}
 		}
+		return skip;
+	}
 
-		if (currentChar == '\n') {
-			accept(1);
-		}
+	private char commentsHandler() {
+		int skip = 0;
+		char lastChar = 0;
 
-		// Comments handler
 		if (currentChar == '/') {
 			int nthChar = 2;
-			System.out.println("nextChar: " + inspectChar(1));
+			// handle comments like '//'
 			if (inspectChar(1) == '/') {
-				System.out.println("nextNChar: " + inspectChar(nthChar));
-
 				while (inspectChar(nthChar) != '\n') {
 					skip++;
 					nthChar++;
 				}
-				lineOffset++;
-				// updateSourcePosition(1, 0, 0);
+				// lineOffset++;
+				skip = nthChar;
 			} else if (inspectChar(1) == '*') {
-				while (inspectChar(nthChar) != '*'
-						&& inspectChar(nthChar + 1) != '/') {
-					System.out.println("nextNChar: " + inspectChar(nthChar)
-							+ " n= " + nthChar);
 
-					if (inspectChar(nthChar) == '\n') {
-						lineOffset++;
-						// updateSourcePosition(1, 0, 0);
-					}
+				// handle comments like /* ... */
+				StringBuffer buffer = new StringBuffer();
+				buffer.append(inspectChar(nthChar));
+				buffer.append(inspectChar(nthChar + 1));
+				while (!buffer.toString().equals("*/")) {
 					skip++;
 					nthChar++;
+					buffer = new StringBuffer();
+					buffer.append(inspectChar(nthChar));
+					buffer.append(inspectChar(nthChar + 1));
+					// System.out.println(buffer.toString());
 				}
-				skip = skip + 2;
+				skip = nthChar + 2;
+			}
+		}
+
+		if (skip > 0) {
+			while ((inspectChar(skip) == ' ' || inspectChar(skip) == '\t')
+					&& currentChar != '\u0000') {
+				skip++;
 			}
 		}
 
 		// skip to the next 'skip' chars
 		for (int i = 0; i < skip; i++) {
+			lastChar = currentChar;
+			currentChar = sourceFile.getNextChar();
+		}
+		updateSourcePosition(0, skip, skip);
+
+		return lastChar;
+	}
+
+	void skipSpaceAndComments() {
+		int skip = 0;
+		int lineOffset = 0;
+
+		skip += spaceHandler();
+		// skip to the next 'skip' chars
+		for (int i = 0; i < skip; i++) {
 			currentChar = sourceFile.getNextChar();
 		}
 		updateSourcePosition(lineOffset, skip, skip);
+		if (currentChar == '\n')
+			accept();
 
+		commentsHandler();
+
+		while (currentChar == '\n' && inspectChar(1) == '/') {
+			accept();
+			commentsHandler();
+		}
 	}
 
 	private void updateSourcePosition(int lineNumOffset, int charStartOffset,
@@ -355,10 +392,13 @@ public final class Scanner {
 
 		currentSpelling = new StringBuffer("");
 		// You must record the position of the current token somehow
-
 		kind = nextToken();
 		linePos = sourcePos.lineStart;
 		charPos = sourcePos.charFinish;
+
+		if (currentSpelling.length() == 1) {
+			sourcePos.charFinish = sourcePos.charStart;
+		}
 
 		tok = new Token(kind, currentSpelling.toString(), sourcePos);
 
