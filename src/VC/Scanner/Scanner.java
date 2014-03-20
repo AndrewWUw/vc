@@ -4,6 +4,9 @@
 
 package VC.Scanner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import VC.ErrorReporter;
 
 public final class Scanner {
@@ -20,7 +23,6 @@ public final class Scanner {
 	private int charLength;
 
 	// =========================================================
-
 	public Scanner(SourceFile source, ErrorReporter reporter) {
 		sourceFile = source;
 		errorReporter = reporter;
@@ -41,7 +43,14 @@ public final class Scanner {
 	private void accept() {
 		// you may save the lexeme of the current token incrementally here
 		// you may also increment your line and column counters here
-		if (currentChar != '\n') {
+
+		if (currentChar == '\"') {
+			if (inspectChar(1) != '\n') {
+				currentChar = sourceFile.getNextChar();
+				currentSpelling.append(currentChar);
+			}
+			charPos++;
+		} else if (currentChar != '\n') {
 			currentSpelling.append(currentChar);
 			// sourcePos.charFinish++;
 			charPos++;
@@ -61,6 +70,17 @@ public final class Scanner {
 		if (num >= 1) {
 			for (int i = 1; i <= num; i++)
 				accept();
+		}
+		if (!(sourcePos.charStart == 1 && sourcePos.charFinish == 1))
+			sourcePos.charFinish += num;
+	}
+
+	private void acceptString(int num) {
+		if (num >= 1) {
+			for (int i = 1; i <= num; i++) {
+
+			}
+
 		}
 		sourcePos.charFinish += num;
 	}
@@ -188,7 +208,8 @@ public final class Scanner {
 				} else {
 					return Token.ERROR;
 				}
-
+			case ' ':
+				skipSpaceAndComments();
 				// ....
 			case SourceFile.eof:
 				currentSpelling.append(Token.spell(Token.EOF));
@@ -206,13 +227,72 @@ public final class Scanner {
 		boolean endOfString = false;
 		char nextChar = inspectChar(num);
 
-		while (nextChar != '\n') {
+		while (nextChar != '\n' && nextChar != Token.EOF && nextChar != '"') {
 			if (nextChar != '"') {
 				num++;
-				nextChar = inspectChar(num);
 			}
+			nextChar = inspectChar(num);
+
+		}
+		nextChar = inspectChar(num + 1);
+		switch (nextChar) {
+		case '\n':
+			num++;
+			break;
+		case Token.EOF:
+
+		case ' ':
+
 		}
 		accept(num);
+
+		StringBuffer buffer = new StringBuffer();
+		for (int i = 0; i < currentSpelling.length(); i++) {
+			char c = currentSpelling.charAt(i);
+			if (c == '\\') {
+				switch (currentSpelling.charAt(i + 1)) {
+				case 'b':
+					buffer.append('\b');
+					i++;
+					break;
+				case 'f':
+					buffer.append('\f');
+					i++;
+					break;
+				case 'n':
+					buffer.append('\n');
+					i++;
+					break;
+				case 'r':
+					buffer.append('\r');
+					i++;
+					break;
+				case 't':
+					buffer.append('\t');
+					i++;
+					break;
+				case '\'':
+					buffer.append('\'');
+					i++;
+					break;
+				case '"':
+					buffer.append('\"');
+					i++;
+					break;
+				case '\\':
+					buffer.append('\\');
+					i++;
+					break;
+				default:
+					buffer.append(c);
+					break;
+				}
+			} else {
+				buffer.append(c);
+			}
+		}
+		if (buffer.length() > 0)
+			currentSpelling = buffer;
 		return Token.STRINGLITERAL;
 	}
 
@@ -297,7 +377,7 @@ public final class Scanner {
 		return skip;
 	}
 
-	private char commentsHandler() {
+	private boolean commentsHandler() {
 		int skip = 0;
 		char lastChar = 0;
 
@@ -309,7 +389,6 @@ public final class Scanner {
 					skip++;
 					nthChar++;
 				}
-				// lineOffset++;
 				skip = nthChar;
 			} else if (inspectChar(1) == '*') {
 
@@ -317,13 +396,17 @@ public final class Scanner {
 				StringBuffer buffer = new StringBuffer();
 				buffer.append(inspectChar(nthChar));
 				buffer.append(inspectChar(nthChar + 1));
-				while (!buffer.toString().equals("*/")) {
+				while (!buffer.toString().equals("*/")
+						&& inspectChar(nthChar) != '\u0000') {
 					skip++;
 					nthChar++;
 					buffer = new StringBuffer();
 					buffer.append(inspectChar(nthChar));
 					buffer.append(inspectChar(nthChar + 1));
 					// System.out.println(buffer.toString());
+				}
+				if (!buffer.toString().equals("*/")) {
+					return false;
 				}
 				skip = nthChar + 2;
 			}
@@ -343,12 +426,13 @@ public final class Scanner {
 		}
 		updateSourcePosition(0, skip, skip);
 
-		return lastChar;
+		return true;
 	}
 
-	void skipSpaceAndComments() {
+	boolean skipSpaceAndComments() {
 		int skip = 0;
 		int lineOffset = 0;
+		boolean error = false;
 
 		skip += spaceHandler();
 		// skip to the next 'skip' chars
@@ -359,11 +443,15 @@ public final class Scanner {
 		if (currentChar == '\n')
 			accept();
 
-		commentsHandler();
-
-		while (currentChar == '\n' && inspectChar(1) == '/') {
-			accept();
-			commentsHandler();
+		if (commentsHandler()) {
+			boolean e = false;
+			while (currentChar == '\n' && inspectChar(1) == '/' && e) {
+				accept();
+				e = commentsHandler();
+			}
+			return e;
+		} else {
+			return false;
 		}
 	}
 
@@ -388,7 +476,18 @@ public final class Scanner {
 		// System.out.println(sourcePos.toString());
 
 		// skip white space and comments
-		skipSpaceAndComments();
+		// boolean error = false;
+		// while ((currentChar == ' ' || currentChar == '/' || currentChar ==
+		// '\n')
+		// && !error) {
+		// error = skipSpaceAndComments();
+		// }
+		//
+		// if (error) {
+		// errorReporter.reportError("unterminated comment", "", sourcePos);
+		// return new Token(Token.ERROR, "unterminated comment", sourcePos);
+		// }
+		// else {
 
 		currentSpelling = new StringBuffer("");
 		// You must record the position of the current token somehow
@@ -406,6 +505,7 @@ public final class Scanner {
 		if (debug)
 			System.out.println(tok);
 		return tok;
+		// }
 	}
 
 	// public StringBuffer getCurrentSpelling() {
