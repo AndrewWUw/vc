@@ -4,9 +4,6 @@
 
 package VC.Scanner;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import VC.ErrorReporter;
 
 public final class Scanner {
@@ -54,7 +51,7 @@ public final class Scanner {
 			currentSpelling.append(currentChar);
 			// sourcePos.charFinish++;
 			charPos++;
-		} else {
+		} else if (currentChar == '\n') {
 			sourcePos.lineStart++;
 			sourcePos.lineFinish++;
 			sourcePos.charStart = 1;
@@ -227,12 +224,11 @@ public final class Scanner {
 		boolean endOfString = false;
 		char nextChar = inspectChar(num);
 
-		while (nextChar != '\n' && nextChar != Token.EOF && nextChar != '"') {
+		while (nextChar != '\n' && nextChar != '\u0000' && nextChar != '\"') {
 			if (nextChar != '"') {
 				num++;
 			}
 			nextChar = inspectChar(num);
-
 		}
 		nextChar = inspectChar(num + 1);
 		switch (nextChar) {
@@ -364,10 +360,14 @@ public final class Scanner {
 		return counter;
 	}
 
+	/**
+	 * Skip space & tab
+	 * 
+	 * @return
+	 */
 	private int spaceHandler() {
 		int skip = 0;
 		if (currentChar == ' ' || currentChar == '\t') {
-			// skip space & tab
 			skip++;
 			while ((inspectChar(skip) == ' ' || inspectChar(skip) == '\t')
 					&& currentChar != '\u0000') {
@@ -377,9 +377,12 @@ public final class Scanner {
 		return skip;
 	}
 
+	/**
+	 * @return true if currentChar is comment; false if it's not a comment, or
+	 *         the comments ends wrongly
+	 */
 	private boolean commentsHandler() {
 		int skip = 0;
-		char lastChar = 0;
 
 		if (currentChar == '/') {
 			int nthChar = 2;
@@ -390,9 +393,9 @@ public final class Scanner {
 					nthChar++;
 				}
 				skip = nthChar;
-			} else if (inspectChar(1) == '*') {
-
-				// handle comments like /* ... */
+			}
+			// handle comments like /* ... */
+			else if (inspectChar(1) == '*') {
 				StringBuffer buffer = new StringBuffer();
 				buffer.append(inspectChar(nthChar));
 				buffer.append(inspectChar(nthChar + 1));
@@ -405,23 +408,28 @@ public final class Scanner {
 					buffer.append(inspectChar(nthChar + 1));
 					// System.out.println(buffer.toString());
 				}
+				// comments ends wrongly, return false
 				if (!buffer.toString().equals("*/")) {
 					return false;
 				}
 				skip = nthChar + 2;
+			} else {
+				// it's not a comment, return false directly
+				return false;
 			}
+		} else {
+			return false;
 		}
 
+		// check if there is spaces or tabs behind the comments
 		if (skip > 0) {
 			while ((inspectChar(skip) == ' ' || inspectChar(skip) == '\t')
 					&& currentChar != '\u0000') {
 				skip++;
 			}
 		}
-
 		// skip to the next 'skip' chars
 		for (int i = 0; i < skip; i++) {
-			lastChar = currentChar;
 			currentChar = sourceFile.getNextChar();
 		}
 		updateSourcePosition(0, skip, skip);
@@ -429,10 +437,15 @@ public final class Scanner {
 		return true;
 	}
 
-	boolean skipSpaceAndComments() {
+	/**
+	 * Skip space and comments from input stream
+	 * 
+	 * @return true: if space and comments have been processed; false: otherwise
+	 */
+	private boolean skipSpaceAndComments() {
 		int skip = 0;
 		int lineOffset = 0;
-		boolean error = false;
+		boolean isComment = false;
 
 		skip += spaceHandler();
 		// skip to the next 'skip' chars
@@ -443,15 +456,18 @@ public final class Scanner {
 		if (currentChar == '\n')
 			accept();
 
-		if (commentsHandler()) {
-			boolean e = false;
-			while (currentChar == '\n' && inspectChar(1) == '/' && e) {
+		isComment = commentsHandler();
+		// check if the next line also is comment
+		if (isComment) {
+			while (currentChar == '\n' && inspectChar(1) == '/' && isComment) {
+				// only if the current char is \n and the next line starts with
+				// and the preivous line is also comment
 				accept();
-				e = commentsHandler();
+				isComment = commentsHandler();
 			}
-			return e;
+			return isComment;
 		} else {
-			return false;
+			return false; // fail to process the comments & spaces
 		}
 	}
 
@@ -475,44 +491,41 @@ public final class Scanner {
 		sourcePos.charFinish = charPos;
 		// System.out.println(sourcePos.toString());
 
-		// skip white space and comments
-		// boolean error = false;
-		// while ((currentChar == ' ' || currentChar == '/' || currentChar ==
-		// '\n')
-		// && !error) {
-		// error = skipSpaceAndComments();
-		// }
-		//
-		// if (error) {
-		// errorReporter.reportError("unterminated comment", "", sourcePos);
-		// return new Token(Token.ERROR, "unterminated comment", sourcePos);
-		// }
-		// else {
-
-		currentSpelling = new StringBuffer("");
-		// You must record the position of the current token somehow
-		kind = nextToken();
-		linePos = sourcePos.lineStart;
-		charPos = sourcePos.charFinish;
-
-		if (currentSpelling.length() == 1) {
-			sourcePos.charFinish = sourcePos.charStart;
+		boolean isSucceed = true;
+		// skip white space and comments process space and comments
+		// only continue if the previous line is processed successfully
+		while ((currentChar == ' ' || currentChar == '/' || currentChar == '\n')
+				&& isSucceed && currentChar != '\u0000') {
+			isSucceed = skipSpaceAndComments();
+			System.out.println("currentChar == ' ': " + (currentChar == ' '));
+			System.out.println("currentChar == '/': " + (currentChar == '/'));
+			System.out.println("currentChar == ' n': " + (currentChar == '\n'));
+			System.out.println("isSucceed: " + isSucceed);
+			System.out.println("currentChar != '\u0000': "
+					+ (currentChar != '\u0000'));
+			System.out.println();
 		}
 
-		tok = new Token(kind, currentSpelling.toString(), sourcePos);
+		if (!isSucceed) {
+			errorReporter.reportError("unterminated comment", "", sourcePos);
+			return new Token(Token.ERROR, "unterminated comment", sourcePos);
+		} else {
+			currentSpelling = new StringBuffer("");
+			// You must record the position of the current token somehow
+			kind = nextToken();
+			linePos = sourcePos.lineStart;
+			charPos = sourcePos.charFinish;
 
-		// * do not remove these three lines
-		if (debug)
-			System.out.println(tok);
-		return tok;
-		// }
+			if (currentSpelling.length() == 1) {
+				sourcePos.charFinish = sourcePos.charStart;
+			}
+
+			tok = new Token(kind, currentSpelling.toString(), sourcePos);
+
+			// * do not remove these three lines
+			if (debug)
+				System.out.println(tok);
+			return tok;
+		}
 	}
-
-	// public StringBuffer getCurrentSpelling() {
-	// return currentSpelling;
-	// }
-	//
-	// public void setCurrentSpelling(StringBuffer currentSpelling) {
-	// this.currentSpelling = currentSpelling;
-	// }
 }
