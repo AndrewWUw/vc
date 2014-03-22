@@ -362,26 +362,32 @@ public final class Scanner {
 
 	/**
 	 * Skip space & tab
-	 * 
-	 * @return
 	 */
-	private int spaceHandler() {
+	private void spaceHandler() {
 		int skip = 0;
 		if (currentChar == ' ' || currentChar == '\t') {
 			skip++;
 			while ((inspectChar(skip) == ' ' || inspectChar(skip) == '\t')
-					&& currentChar != '\u0000') {
+					&& currentChar != '\u0000')
 				skip++;
-			}
 		}
-		return skip;
+
+		// skip the next 'skip' chars
+		for (int i = 0; i < skip; i++) {
+			currentChar = sourceFile.getNextChar();
+		}
+		updateSourcePosition(0, skip, skip);
+		// return skip;
 	}
 
 	/**
-	 * @return true if currentChar is comment; false if it's not a comment, or
-	 *         the comments ends wrongly
+	 * @return 0: if currentChar is comment;
+	 * 
+	 *         -1: if the comments ends wrongly
+	 * 
+	 *         1: if it's not a comment,
 	 */
-	private boolean commentsHandler() {
+	private int commentsHandler() {
 		int skip = 0;
 
 		if (currentChar == '/') {
@@ -408,17 +414,17 @@ public final class Scanner {
 					buffer.append(inspectChar(nthChar + 1));
 					// System.out.println(buffer.toString());
 				}
-				// comments ends wrongly, return false
+				// comments ends wrongly, return -1
 				if (!buffer.toString().equals("*/")) {
-					return false;
+					return -1;
 				}
 				skip = nthChar + 2;
 			} else {
-				// it's not a comment, return false directly
-				return false;
+				// it's not a comment, return 1
+				return 1;
 			}
 		} else {
-			return false;
+			return 1;
 		}
 
 		// check if there is spaces or tabs behind the comments
@@ -434,55 +440,47 @@ public final class Scanner {
 		}
 		updateSourcePosition(0, skip, skip);
 
-		return true;
+		return 0;
 	}
 
 	/**
 	 * Skip space and comments from input stream
 	 * 
-	 * @return true: if space and comments have been processed; false: otherwise
+	 * @return 0: space and comments have been processed;
+	 * 
+	 *         -1: the comments ends wrongly
+	 * 
+	 *         1: it's not a comment
 	 */
-	private boolean skipSpaceAndComments() {
+	private int skipSpaceAndComments() {
 		int skip = 0;
 		int lineOffset = 0;
-		boolean isComment = false;
+		int isComment = -1;
 
-		skip += spaceHandler();
-		// skip to the next 'skip' chars
-		for (int i = 0; i < skip; i++) {
-			currentChar = sourceFile.getNextChar();
-		}
-		updateSourcePosition(lineOffset, skip, skip);
+		// skip += spaceHandler();
+		spaceHandler();
 		if (currentChar == '\n')
 			accept();
 
 		isComment = commentsHandler();
 		// check if the next line also is comment
-		if (isComment) {
-			while (currentChar == '\n' && inspectChar(1) == '/' && isComment) {
-				// only if the current char is \n and the next line starts with
-				// and the preivous line is also comment
+		if (isComment == 0 && currentChar != '\u0000') {
+			while (currentChar == '\n' && inspectChar(1) == '/'
+					&& isComment == 0) {
+				// only if the current char is \n and the next line starts
+				// with '/' and the previous line is also comment
 				accept();
 				isComment = commentsHandler();
 			}
 			return isComment;
 		} else {
-			return false; // fail to process the comments & spaces
+			return isComment; // fail to process the comments & spaces
 		}
-	}
-
-	private void updateSourcePosition(int lineNumOffset, int charStartOffset,
-			int charFinishOffset) {
-		sourcePos.lineStart += lineNumOffset;
-		sourcePos.lineFinish += lineNumOffset;
-		sourcePos.charStart += charStartOffset;
-		sourcePos.charFinish += charFinishOffset;
 	}
 
 	public Token getToken() {
 		Token tok;
 		int kind;
-
 		// Init for new sourcePosition
 		sourcePos = new SourcePosition();
 		sourcePos.lineStart = linePos;
@@ -491,24 +489,23 @@ public final class Scanner {
 		sourcePos.charFinish = charPos;
 		// System.out.println(sourcePos.toString());
 
-		boolean isSucceed = true;
+		int isSucceed = 0;
 		// skip white space and comments process space and comments
 		// only continue if the previous line is processed successfully
-		while ((currentChar == ' ' || currentChar == '/' || currentChar == '\n')
-				&& isSucceed && currentChar != '\u0000') {
-			isSucceed = skipSpaceAndComments();
-			System.out.println("currentChar == ' ': " + (currentChar == ' '));
-			System.out.println("currentChar == '/': " + (currentChar == '/'));
-			System.out.println("currentChar == ' n': " + (currentChar == '\n'));
-			System.out.println("isSucceed: " + isSucceed);
-			System.out.println("currentChar != '\u0000': "
-					+ (currentChar != '\u0000'));
-			System.out.println();
+		if (currentChar != '\u0000') {
+			while ((currentChar == ' ' || currentChar == '/' || currentChar == '\n')
+					// || (currentChar == '/' && (inspectChar(1) == '/' ||
+					// inspectChar(1) == '*')) || currentChar == '\n')
+					&& isSucceed == 0 && currentChar != '\u0000') {
+				isSucceed = skipSpaceAndComments();
+			}
 		}
 
-		if (!isSucceed) {
+		if (isSucceed == -1) {
 			errorReporter.reportError("unterminated comment", "", sourcePos);
+			accept(1);
 			return new Token(Token.ERROR, "unterminated comment", sourcePos);
+
 		} else {
 			currentSpelling = new StringBuffer("");
 			// You must record the position of the current token somehow
@@ -527,5 +524,13 @@ public final class Scanner {
 				System.out.println(tok);
 			return tok;
 		}
+	}
+
+	private void updateSourcePosition(int lineNumOffset, int charStartOffset,
+			int charFinishOffset) {
+		sourcePos.lineStart += lineNumOffset;
+		sourcePos.lineFinish += lineNumOffset;
+		sourcePos.charStart += charStartOffset;
+		sourcePos.charFinish += charFinishOffset;
 	}
 }
