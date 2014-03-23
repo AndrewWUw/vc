@@ -24,9 +24,8 @@ public class vc {
 
 		// System.out.println("asdfas" + '\t' + "====");
 		System.out.println("======= The VC compiler =======");
-
 		SourceFile source = new SourceFile(inputFilename);
-
+		
 		reporter = new ErrorReporter();
 		scanner = new Scanner(source, reporter);
 		scanner.enableDebugging();
