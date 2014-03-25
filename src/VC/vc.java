@@ -1,37 +1,48 @@
-/*~*
+/*
+ * vc.java           
  *
- * vc.java           28---2---2014
+ * F O R     A S S I G N M E N T    2
+ * 
  * 
  * Jingling Xue, CSE, UNSW, Sydney NSW 2052, Australia.
- *
- *~*/
+ * 
+ */
 
 package VC;
 
 import VC.Scanner.Scanner;
 import VC.Scanner.SourceFile;
-import VC.Scanner.Token;
+import VC.Recogniser.Recogniser;
 
 public class vc {
 
-	private static Scanner scanner;
-	private static ErrorReporter reporter;
-	private static Token currentToken;
-	private static String inputFilename;
+    private static Scanner scanner;
+    private static ErrorReporter reporter;
+    private static Recogniser recogniser;
 
-	public static void main(String[] args) {
-		inputFilename = args[0];
+    private static String inputFilename; 
 
-		// System.out.println("asdfas" + '\t' + "====");
-		System.out.println("======= The VC compiler =======");
-		SourceFile source = new SourceFile(inputFilename);
-		
-		reporter = new ErrorReporter();
-		scanner = new Scanner(source, reporter);
-		scanner.enableDebugging();
+    public static void main(String[] args) {
+        if (args.length != 1) {
+          System.out.println("Usage: java VC.vc filename\n");
+          System.exit(1); 
+        } else
+           inputFilename = args[0];
 
-		do
-			currentToken = scanner.getToken();
-		while (currentToken.kind != Token.EOF);
-	}
+        System.out.println("======= The VC compiler =======");
+
+        SourceFile source = new SourceFile(inputFilename);
+
+        reporter = new ErrorReporter();
+        scanner  = new Scanner(source, reporter);
+        recogniser = new Recogniser(scanner, reporter);
+
+        recogniser.parseProgram();
+
+        if (reporter.numErrors == 0)
+           System.out.println ("Compilation was successful.");
+        else
+           System.out.println ("Compilation was unsuccessful.");
+    }
 }
+
