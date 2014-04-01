@@ -136,20 +136,37 @@ public class Recogniser {
 	}
 
 	// ==================== PRIMITIVE TYPES ============================
-	
+
 	void parseType() throws SyntaxError {
-		switch(currentToken.kind) {
-//		case VC.Scanner.
+		switch (currentToken.kind) {
+		case Token.VOID:
+			match(Token.VOID);
+			break;
+		case Token.BOOLEAN:
+			match(Token.BOOLEAN);
+			break;
+		case Token.INT:
+			match(Token.INT);
+			break;
+		default:
+			match(Token.FLOAT);
+			break;
 		}
 	}
-	
+
 	// ======================= STATEMENTS ==============================
 
 	void parseCompoundStmt() throws SyntaxError {
 
 		match(Token.LCURLY);
+		parseVarDeclList();
 		parseStmtList();
 		match(Token.RCURLY);
+	}
+
+	void parseVarDeclList() throws SyntaxError {
+		while (currentToken.kind != 0)
+			parseVarDecl();
 	}
 
 	// Here, a new nontermial has been introduced to define { stmt } *
@@ -162,23 +179,59 @@ public class Recogniser {
 	void parseStmt() throws SyntaxError {
 
 		switch (currentToken.kind) {
-
+		case Token.IF:
+			parseContinueStmt();
+			break;
+		case Token.FOR:
+			parseContinueStmt();
+			break;
+		case Token.WHILE:
+			parseContinueStmt();
+			break;
+		case Token.BREAK:
+			parseContinueStmt();
+			break;
 		case Token.CONTINUE:
 			parseContinueStmt();
 			break;
-
+		case Token.RETURN:
+			parseContinueStmt();
+			break;
+		case Token.LCURLY:
+			parseCompoundStmt();
+			break;
 		default:
 			parseExprStmt();
 			break;
-
 		}
 	}
 
-	void parseContinueStmt() throws SyntaxError {
+	void parseIFStmt() throws SyntaxError {
 
+	}
+
+	void parseFORStmt() throws SyntaxError {
+
+	}
+
+	void parseWHILEStmt() throws SyntaxError {
+
+	}
+
+	void parseBreakStmt() throws SyntaxError {
+		match(Token.BREAK);
+		match(Token.SEMICOLON);
+	}
+
+	void parseContinueStmt() throws SyntaxError {
 		match(Token.CONTINUE);
 		match(Token.SEMICOLON);
+	}
 
+	void parseReturnStmt() throws SyntaxError {
+		match(Token.RETURN);
+		parseExpr();
+		match(Token.SEMICOLON);
 	}
 
 	void parseExprStmt() throws SyntaxError {
