@@ -44,6 +44,8 @@
 
 package VC.Recogniser;
 
+import com.sun.xml.internal.ws.api.pipe.NextAction;
+
 import VC.Scanner.Scanner;
 import VC.Scanner.SourcePosition;
 import VC.Scanner.Token;
@@ -91,11 +93,13 @@ public class Recogniser {
 	public void parseProgram() {
 
 		try {
-			match(Token.LBRACKET);
-			switch (currentToken.kind) {
-
+			while (currentToken.kind != Token.EOF) {
+				parseType();
+				switch (currentToken.kind) {
+				// case
+				}
 			}
-			parseFuncDecl();
+			// parseFuncDecl();
 			if (currentToken.kind != Token.EOF) {
 				syntacticError("\"%\" wrong result type for a function",
 						currentToken.spelling);
@@ -108,31 +112,57 @@ public class Recogniser {
 
 	void parseFuncDecl() throws SyntaxError {
 
-		match(Token.VOID);
+		parseType();
 		parseIdent();
-		match(Token.LPAREN);
-		match(Token.RPAREN);
+		parseParaList();
 		parseCompoundStmt();
 	}
 
 	void parseVarDecl() throws SyntaxError {
-
+		parseType();
+		parseInitDeclList();
+		match(Token.COMMA);
 	}
 
 	void parseInitDeclList() throws SyntaxError {
-
+		parseInitDecl();
+		while (currentToken.kind == Token.COMMA) {
+			accept();
+			parseInitDecl();
+		}
 	}
 
 	void parseInitDecl() throws SyntaxError {
-
+		parseDeclarator();
+		if (currentToken.kind == Token.EQ) {
+			accept();
+			parseInitialiser();
+		}
 	}
 
 	void parseDeclarator() throws SyntaxError {
-
+		parseIdent();
+		if (currentToken.kind == Token.LBRACKET) {
+			accept();
+			while (currentToken.kind == Token.INTLITERAL) {
+				accept();
+			}
+			match(Token.RBRACKET);
+		}
 	}
 
 	void parseInitialiser() throws SyntaxError {
-
+		if (currentToken.kind == Token.LCURLY) {
+			accept();
+			parseExpr();
+			while (currentToken.kind == Token.COMMA) {
+				accept();
+				parseExpr();
+			}
+			match(Token.RCURLY);
+		} else {
+			parseExpr();
+		}
 	}
 
 	// ==================== PRIMITIVE TYPES ============================
@@ -148,16 +178,16 @@ public class Recogniser {
 		case Token.INT:
 			match(Token.INT);
 			break;
-		default:
+		case Token.FLOAT:
 			match(Token.FLOAT);
-			break;
+		default:
+			syntacticError("Illegal type declaration", currentToken.spelling);
 		}
 	}
 
 	// ======================= STATEMENTS ==============================
 
 	void parseCompoundStmt() throws SyntaxError {
-
 		match(Token.LCURLY);
 		parseVarDeclList();
 		parseStmtList();
@@ -207,15 +237,41 @@ public class Recogniser {
 	}
 
 	void parseIFStmt() throws SyntaxError {
-
+		accept();
+		match(Token.LPAREN);
+		parseExpr();
+		match(Token.RPAREN);
+		parseStmt();
+		if (currentToken.kind == Token.ELSE) {
+			accept();
+			parseStmt();
+		}
 	}
 
 	void parseFORStmt() throws SyntaxError {
-
+		accept();
+		match(Token.LPAREN);
+		if (currentToken.kind != Token.SEMICOLON) {
+			parseExpr();
+		}
+		match(Token.SEMICOLON);
+		if (currentToken.kind != Token.SEMICOLON) {
+			parseExpr();
+		}
+		match(Token.SEMICOLON);
+		if (currentToken.kind != Token.RPAREN) {
+			parseExpr();
+		}
+		match(Token.RPAREN);
+		parseStmt();
 	}
 
 	void parseWHILEStmt() throws SyntaxError {
-
+		accept();
+		match(Token.LPAREN);
+		parseExpr();
+		match(Token.RPAREN);
+		parseStmt();
 	}
 
 	void parseBreakStmt() throws SyntaxError {
@@ -230,21 +286,17 @@ public class Recogniser {
 
 	void parseReturnStmt() throws SyntaxError {
 		match(Token.RETURN);
-		parseExpr();
+		if (currentToken.kind != Token.SEMICOLON) {
+			parseExpr();
+		}
 		match(Token.SEMICOLON);
 	}
 
 	void parseExprStmt() throws SyntaxError {
-
-		if (currentToken.kind == Token.ID
-				|| currentToken.kind == Token.INTLITERAL
-				|| currentToken.kind == Token.MINUS
-				|| currentToken.kind == Token.LPAREN) {
+		if (currentToken.kind != Token.SEMICOLON) {
 			parseExpr();
-			match(Token.SEMICOLON);
-		} else {
-			match(Token.SEMICOLON);
 		}
+		match(Token.SEMICOLON);
 	}
 
 	// ======================= IDENTIFIERS ======================
@@ -339,6 +391,54 @@ public class Recogniser {
 			syntacticError("illegal parimary expression", currentToken.spelling);
 
 		}
+	}
+
+	// ======================== PARAMETERS ========================
+
+	void parseParaList() throws SyntaxError {
+		match(Token.LBRACKET);
+		if (currentToken.kind != Token.RBRACKET) {
+			parseProperParaList();
+		}
+		match(Token.RBRACKET);
+	}
+
+	void parseProperParaList() throws SyntaxError {
+		parseParaDecl();
+		while (currentToken.kind == Token.COMMA) {
+			accept();
+			parseParaDecl();
+		}
+	}
+
+	void parseParaDecl() throws SyntaxError {
+		parseType();
+		parseDeclarator();
+	}
+
+	void parseArgList() throws SyntaxError {
+		match(Token.LPAREN);
+		if (currentToken.kind != Token.RPAREN) {
+			parseProperArgList();
+		} else if (currentToken.kind == Token.RPAREN) {
+			accept();
+		} else {
+			syntacticError("Illegal arg list expression", currentToken.spelling);
+		}
+
+	}
+
+	void parseProperArgList() throws SyntaxError {
+		parseArg();
+
+		while (currentToken.kind == Token.COMMA) {
+			accept();
+			parseArg();
+		}
+	}
+
+	void parseArg() throws SyntaxError {
+		parseExpr();
 	}
 
 	// ========================== LITERALS ========================
