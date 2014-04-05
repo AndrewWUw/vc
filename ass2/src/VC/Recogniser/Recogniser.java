@@ -92,21 +92,30 @@ public class Recogniser {
 
 		try {
 			while (currentToken.kind != Token.EOF) {
-				parseType();
-				parseIdent();
-				switch (currentToken.kind) {
-				case Token.LPAREN:
-					parseFuncDecl();
+				if (currentToken.kind == Token.VOID
+						|| currentToken.kind == Token.BOOLEAN
+						|| currentToken.kind == Token.INT
+						|| currentToken.kind == Token.FLOAT) {
+					parseType();
+					parseIdent();
+					switch (currentToken.kind) {
+					case Token.LPAREN:
+						parseFuncDecl();
+						break;
+					case Token.LBRACKET:
+					case Token.EQ:
+					case Token.COMMA:
+						parseVarDecl();
+						break;
+					case Token.SEMICOLON:
+						accept();
+						break;
+					default:
+						syntacticError("Wrong result type for a program",
+								currentToken.spelling);
+					}
+				} else
 					break;
-				case Token.LBRACKET:
-				case Token.EQ:
-				case Token.COMMA:
-					parseVarDecl();
-					break;
-				default:
-					syntacticError("Wrong result type for a program",
-							currentToken.spelling);
-				}
 			}
 			// parseFuncDecl();
 			if (currentToken.kind != Token.EOF) {
@@ -121,14 +130,25 @@ public class Recogniser {
 
 	void parseFuncDecl() throws SyntaxError {
 
-		// parseType();
-		// parseIdent();
+		if (currentToken.kind == Token.VOID
+				|| currentToken.kind == Token.BOOLEAN
+				|| currentToken.kind == Token.INT
+				|| currentToken.kind == Token.FLOAT) {
+			parseType();
+			parseIdent();
+		}
 		parseParaList();
 		parseCompoundStmt();
 	}
 
 	void parseVarDecl() throws SyntaxError {
-		// parseType();
+
+		if (currentToken.kind == Token.VOID
+				|| currentToken.kind == Token.BOOLEAN
+				|| currentToken.kind == Token.INT
+				|| currentToken.kind == Token.FLOAT) {
+			parseType();
+		}
 		parseInitDeclList();
 		match(Token.SEMICOLON);
 	}
@@ -142,7 +162,9 @@ public class Recogniser {
 	}
 
 	void parseInitDecl() throws SyntaxError {
-		parseDeclarator();
+		if (currentToken.kind != Token.EQ) {
+			parseDeclarator();
+		}
 		if (currentToken.kind == Token.EQ) {
 			accept();
 			parseInitialiser();
@@ -152,16 +174,18 @@ public class Recogniser {
 	void parseDeclarator() throws SyntaxError {
 		if (currentToken.kind == Token.ID) {
 			parseIdent();
-		} else if (currentToken.kind == Token.LBRACKET) {
+		}
+		if (currentToken.kind == Token.LBRACKET) {
 			accept();
 			if (currentToken.kind == Token.INTLITERAL) {
 				accept();
 			}
 			match(Token.RBRACKET);
-		} else {
-			syntacticError("Illegal declarator expression",
-					currentToken.spelling);
 		}
+		// else {
+		// syntacticError("Illegal declarator expression",
+		// currentToken.spelling);
+		// }
 	}
 
 	void parseInitialiser() throws SyntaxError {
@@ -193,6 +217,7 @@ public class Recogniser {
 			break;
 		case Token.FLOAT:
 			match(Token.FLOAT);
+			break;
 		default:
 			syntacticError("Illegal type declaration", currentToken.spelling);
 		}
@@ -501,14 +526,16 @@ public class Recogniser {
 	// ======================== PARAMETERS ========================
 
 	void parseParaList() throws SyntaxError {
-		match(Token.LBRACKET);
-		if (currentToken.kind != Token.RBRACKET) {
+
+		match(Token.LPAREN);
+		if (currentToken.kind != Token.RPAREN) {
 			parseProperParaList();
 		}
-		match(Token.RBRACKET);
+		match(Token.RPAREN);
 	}
 
 	void parseProperParaList() throws SyntaxError {
+
 		parseParaDecl();
 		while (currentToken.kind == Token.COMMA) {
 			accept();
@@ -517,15 +544,19 @@ public class Recogniser {
 	}
 
 	void parseParaDecl() throws SyntaxError {
+
 		parseType();
 		parseDeclarator();
 	}
 
 	void parseArgList() throws SyntaxError {
+
 		match(Token.LPAREN);
 		if (currentToken.kind != Token.RPAREN) {
 			parseProperArgList();
-		} else if (currentToken.kind == Token.RPAREN) {
+		}
+
+		if (currentToken.kind == Token.RPAREN) {
 			accept();
 		} else {
 			syntacticError("Illegal arg list expression", currentToken.spelling);
@@ -534,8 +565,8 @@ public class Recogniser {
 	}
 
 	void parseProperArgList() throws SyntaxError {
-		parseArg();
 
+		parseArg();
 		while (currentToken.kind == Token.COMMA) {
 			accept();
 			parseArg();
@@ -543,6 +574,7 @@ public class Recogniser {
 	}
 
 	void parseArg() throws SyntaxError {
+
 		parseExpr();
 	}
 
