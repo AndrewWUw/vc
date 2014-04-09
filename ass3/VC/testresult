@@ -1,0 +1,8 @@
+#! /usr/local/bin/bash
+for i in `ls t*.vc` 
+do
+	echo $i:
+	b=`basename $i .vc`
+	java VC.vc $i > $b.xxx
+	diff $b.xx $b.sol
+done
