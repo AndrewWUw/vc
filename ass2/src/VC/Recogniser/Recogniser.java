@@ -174,6 +174,9 @@ public class Recogniser {
 	void parseDeclarator() throws SyntaxError {
 		if (currentToken.kind == Token.ID) {
 			parseIdent();
+		} else {
+			syntacticError("Illegal declarator expression, identifier expected here",
+					currentToken.spelling);
 		}
 		if (currentToken.kind == Token.LBRACKET) {
 			accept();
@@ -182,10 +185,7 @@ public class Recogniser {
 			}
 			match(Token.RBRACKET);
 		}
-		// else {
-		// syntacticError("Illegal declarator expression",
-		// currentToken.spelling);
-		// }
+
 	}
 
 	void parseInitialiser() throws SyntaxError {
