@@ -15,7 +15,6 @@
  program       -> func-decl
 
  // declaration
-
  func-decl     -> void identifier "(" ")" compound-stmt
 
  identifier    -> ID
@@ -23,7 +22,7 @@
  // statements 
  compound-stmt -> "{" stmt* "}" 
  stmt          -> continue-stmt
- |  expr-stmt
+ 			   |  expr-stmt
  continue-stmt -> continue ";"
  expr-stmt     -> expr? ";"
 
@@ -31,15 +30,15 @@
  expr                -> assignment-expr
  assignment-expr     -> additive-expr
  additive-expr       -> multiplicative-expr
- |  additive-expr "+" multiplicative-expr
+ 					 |  additive-expr "+" multiplicative-expr
  multiplicative-expr -> unary-expr
- |  multiplicative-expr "*" unary-expr
+ 					 |  multiplicative-expr "*" unary-expr
  unary-expr          -> "-" unary-expr
- |  primary-expr
+ 					 |  primary-expr
 
  primary-expr        -> identifier
- |  INTLITERAL
- | "(" expr ")"
+ 					 |  INTLITERAL
+ 					 | "(" expr ")"
  */
 
 package VC.Recogniser;
@@ -186,10 +185,6 @@ public class Recogniser {
 			}
 			match(Token.RBRACKET);
 		}
-		// else {
-		// syntacticError("Illegal declarator expression",
-		// currentToken.spelling);
-		// }
 	}
 
 	void parseInitialiser() throws SyntaxError {
