@@ -242,7 +242,7 @@ public class Parser {
 		match(Token.SEMICOLON);
 
 		finish(declPos);
-		lvAST = new LocalVarDecl(tAST, iAST, eAST, declPos);
+//		lvAST = new LocalVarDecl(tAST, iAST, eAST, declPos);
 
 		return lvAST;
 	}
@@ -295,7 +295,8 @@ public class Parser {
 			// dAST = new
 		}
 
-		return dAST;
+//		return dAST;
+		return null;
 	}
 
 	Expr parseInitialiser() throws SyntaxError {
@@ -327,7 +328,7 @@ public class Parser {
 
 		iAST = new ExprList(eAST, elAST, ePos);
 		
-		return null;l
+		return null;
 //		return iAST;
 	}
 
