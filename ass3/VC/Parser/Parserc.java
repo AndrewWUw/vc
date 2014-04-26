@@ -140,8 +140,11 @@ public class Parserc {
 
 	Decl parseLocalVarDecl() throws SyntaxError {
 
-		Decl lvAST = null;
+		Decl lvarAST = null;
 		Type tAST = null;
+		Ident iAST = null;
+		Expr eAST = null;
+
 		SourcePosition declPos = new SourcePosition();
 		start(declPos);
 
@@ -150,15 +153,45 @@ public class Parserc {
 				|| currentToken.kind == Token.INT
 				|| currentToken.kind == Token.FLOAT) {
 			tAST = parseType();
+			iAST = parseIdent();
+
+			if (currentToken.kind == Token.LBRACKET) {
+				// array decl
+				accept();
+				Expr dAST = parseExpr();
+				match(Token.RBRACKET);
+				tAST = new ArrayType(tAST, dAST, declPos);
+
+				if (currentToken.kind == Token.EQ) {
+					// eAST = parseArrayVarInitList();
+					finish(declPos);
+					lvarAST = new LocalVarDecl(tAST, iAST, eAST, declPos);
+				} else {
+					finish(declPos);
+					lvarAST = new LocalVarDecl(tAST, iAST, new EmptyExpr(
+							dummyPos), declPos);
+				}
+			} else {
+				if (currentToken.kind == Token.EQ) {
+					// var init
+					eAST = parseVarExprInit();
+					finish(declPos);
+					lvarAST = new LocalVarDecl(tAST, iAST, eAST, declPos);
+				} else {
+					lvarAST = new LocalVarDecl(tAST, iAST, new EmptyExpr(
+							dummyPos), declPos);
+				}
+			}
+
+			if (currentToken.kind == Token.COMMA) {
+				// mutiple var decl
+				accept();
+			} else {
+				match(Token.SEMICOLON);
+			}
 		}
 
-		List dlAST = parseInitDeclList();
-		match(Token.SEMICOLON);
-
-		finish(declPos);
-		// lvAST = new LocalVarDecl(tAST, iAST, eAST, declPos);
-
-		return lvAST;
+		return lvarAST;
 	}
 
 	List parseInitDeclList() throws SyntaxError {
@@ -182,7 +215,7 @@ public class Parserc {
 		}
 		if (currentToken.kind == Token.EQ) {
 			accept();
-			parseInitialiser();
+			// parseInitialiser();
 		}
 	}
 
@@ -247,40 +280,6 @@ public class Parserc {
 
 		return elAST;
 	}
-
-	// List parseExprList() throws SyntaxError {
-	//
-	// List elAST = null;
-	// Expr eAST = null;
-	//
-	// SourcePosition exprPos = new SourcePosition();
-	// start(exprPos);
-	//
-	// eAST = parseExpr();
-	//
-	// if (currentToken.kind == Token.COMMA) {
-	// accept();
-	//
-	// } else if (eAST != null) {
-	// finish(exprPos);
-	// elAST = new ExprList(eAST, new EmptyExprList(dummyPos), exprPos);
-	// } else {
-	// elAST = new EmptyExprList(dummyPos);
-	// }
-	//
-	// return elAST;
-	// }
-
-	// if (currentToken.kind == Token.VOID) {
-	// dlAST = parseFuncDeclList();
-	// finish(funcPos);
-	// dlAST = new DeclList(dAST, dlAST, funcPos);
-	// } else if (dAST != null) {
-	// finish(funcPos);
-	// dlAST = new DeclList(dAST, new EmptyDeclList(dummyPos), funcPos);
-	// }
-	// if (dlAST == null)
-	// dlAST = new EmptyDeclList(dummyPos);
 
 	// ======================== TYPES ==========================
 
