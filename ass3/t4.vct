@@ -1,8 +1,0 @@
-Program
-  DeclList
-    FuncDecl
-      int
-      f
-      EmptyParaList
-      EmptyCompStmt
-    EmptyDeclList
