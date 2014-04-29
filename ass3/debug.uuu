@@ -1,8 +1,6 @@
 void main()
 {
-  a;
-  b[a];
-  c;
-  d(d(), d());
-  "x";
+  int i;
+  int jj;
+  int kkk;
 }
