@@ -16,7 +16,7 @@ public class SourceFile {
 	public SourceFile(String filename) {
 		try {
 			reader = new LineNumberReader(new BufferedReader(new FileReader(
-					"VC/Parser/" + filename)));
+					"VC/Checker/" + filename)));
 		} catch (java.io.FileNotFoundException e) {
 			System.out.println("[# vc #]: can't read: " + filename);
 			System.exit(1);
