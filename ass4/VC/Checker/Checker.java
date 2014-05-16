@@ -5,12 +5,16 @@
 
 package VC.Checker;
 
+import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
+
 import VC.ASTs.*;
 import VC.Scanner.SourcePosition;
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
 public final class Checker implements Visitor {
+
+	private static final String FuncDecl = null;
 
 	private String errMesg[] = {
 			"*0: main function is missing",
@@ -96,7 +100,7 @@ public final class Checker implements Visitor {
 		IdEntry entry = idTable.retrieveOneLevel(ident.spelling);
 
 		if (entry == null) {
-			; // no problem
+			; // no problemdeclareVariable
 		} else
 			reporter.reportError(errMesg[2] + ": %", ident.spelling,
 					ident.position);
@@ -113,14 +117,17 @@ public final class Checker implements Visitor {
 	/** ------------------------ Statements-------------------------- **/
 
 	public Object visitCompoundStmt(CompoundStmt ast, Object o) {
-		idTable.openScope();
+
+		if (!(o instanceof FuncDecl))
+			idTable.openScope();
 
 		// Your code goes here
 		// TODO
 		ast.DL.visit(this, o);
 		ast.SL.visit(this, o);
 
-		idTable.closeScope();
+		if (!(o instanceof FuncDecl))
+			idTable.closeScope();
 		return null;
 	}
 
@@ -153,7 +160,8 @@ public final class Checker implements Visitor {
 
 		ast.E.visit(this, o);
 		if (!ast.E.type.isBooleanType())
-			reporter.reportError(errMesg[20], "", ast.E.position);
+			reporter.reportError(errMesg[20] + "(found: %)",
+					ast.E.type.toString(), ast.E.position);
 
 		ast.S1.visit(this, o);
 		ast.S2.visit(this, o);
@@ -170,7 +178,8 @@ public final class Checker implements Visitor {
 
 		ast.E.visit(this, o);
 		if (!ast.E.type.isBooleanType())
-			reporter.reportError(errMesg[22], "", ast.E.position);
+			reporter.reportError(errMesg[22] + "(found: %)",
+					ast.E.type.toString(), ast.E.position);
 		ast.S.visit(this, o);
 
 		idTable.closeScope();
@@ -184,16 +193,19 @@ public final class Checker implements Visitor {
 		idTable.openScope();
 
 		ast.E1.visit(this, o);
-		if (!ast.E1.type.isBooleanType())
-			reporter.reportError(errMesg[21], "", ast.E1.position);
+		if (!(ast.E1.type.isBooleanType() || ast.E1.type.isErrorType()))
+			reporter.reportError(errMesg[21] + "(found: %)",
+					ast.E1.type.toString(), ast.E1.position);
 
 		ast.E2.visit(this, o);
-		if (!ast.E2.type.isBooleanType())
-			reporter.reportError(errMesg[21], "", ast.E2.position);
+		if (!(ast.E2.type.isBooleanType() || ast.E2.type.isErrorType()))
+			reporter.reportError(errMesg[21] + "(found: %)",
+					ast.E2.type.toString(), ast.E2.position);
 		ast.E3.visit(this, o);
 
-		if (!ast.E3.type.isBooleanType())
-			reporter.reportError(errMesg[21], "", ast.E3.position);
+		if (!(ast.E3.type.isBooleanType() || ast.E3.type.isErrorType()))
+			reporter.reportError(errMesg[21] + "(found: %)",
+					ast.E3.type.toString(), ast.E3.position);
 		ast.S.visit(this, o);
 
 		idTable.closeScope();
@@ -227,8 +239,13 @@ public final class Checker implements Visitor {
 		// TODO Auto-generated method stub
 
 		ast.E.visit(this, o);
-		// if(ast.E.type != )
-		reporter.reportError(errMesg[8], "", ast.E.position);
+
+		FuncDecl fAST = (FuncDecl) o;
+		if (!fAST.T.assignable(ast.E.type))
+			reporter.reportError(errMesg[8], "", ast.position);
+		if (ast.E.isEmptyExpr() && !fAST.T.isVoidType())
+			reporter.reportError(errMesg[31], "", ast.position);
+
 		return null;
 	}
 
@@ -282,6 +299,23 @@ public final class Checker implements Visitor {
 	public Object visitUnaryExpr(UnaryExpr ast, Object o) {
 		// TODO Auto-generated method stub
 		ast.E.visit(this, o);
+
+		if (ast.O.spelling.equals("&&") || ast.O.spelling.equals("||")
+				|| ast.O.spelling.equals("!")) {
+			if (!ast.E.type.isBooleanType())
+				reporter.reportError(errMesg[10] + ": %", ast.O.spelling,
+						ast.position);
+			ast.O.spelling = "i" + ast.O.spelling;
+		} else if ((ast.O.spelling.equals("==") || ast.O.spelling.equals("!="))
+				&& ast.E.type.isBooleanType()) {
+			ast.O.spelling = "i" + ast.O.spelling;
+		} else {
+			if (ast.E.type.isFloatType())
+				ast.O.spelling = "f" + ast.O.spelling;
+			else if (ast.E.type.isIntType())
+				ast.O.spelling = "i" + ast.O.spelling;
+		}
+
 		ast.O.visit(this, o);
 		return ast.type;
 	}
@@ -290,15 +324,45 @@ public final class Checker implements Visitor {
 	public Object visitBinaryExpr(BinaryExpr ast, Object o) {
 		// TODO Auto-generated method stub
 
-		if (!(ast.E1.type.isIntType() || ast.E1.type.isFloatType()))
-			reporter.reportError(errMesg[9], "", ast.E1.position);
-		ast.E1.visit(this, o);
+		Type t1AST = (Type) ast.E1.visit(this, o);
+		Type t2AST = (Type) ast.E2.visit(this, o);
 
-		if (!(ast.E2.type.isIntType() || ast.E2.type.isFloatType()))
-			reporter.reportError(errMesg[9], "", ast.E2.position);
+		if (t1AST == null)
+			t1AST = StdEnvironment.errorType;
+		if (t2AST == null)
+			t2AST = StdEnvironment.errorType;
 
-		ast.E2.visit(this, o);
+		if (ast.E1.type == null)
+			ast.E1.type = t1AST;
+		if (ast.E2.type == null)
+			ast.E2.type = t2AST;
+
 		ast.O.visit(this, o);
+
+		if (!(ast.E1.type.isErrorType() || ast.E2.type.isErrorType())) {
+
+			if (ast.E1.type.isIntType() && ast.E2.type.isFloatType()) {
+				Operator op = new Operator("i2f", dummyPos);
+				UnaryExpr eAST = new UnaryExpr(op, ast.E1, dummyPos);
+				eAST.E.type = StdEnvironment.floatType;
+				ast.E1 = eAST;
+			}
+
+			if (ast.E2.type.isIntType() && ast.E1.type.isFloatType()) {
+				Operator op = new Operator("i2f", dummyPos);
+				UnaryExpr eAST = new UnaryExpr(op, ast.E2, dummyPos);
+				eAST.E.type = StdEnvironment.floatType;
+				ast.E2 = eAST;
+			}
+
+			if (!(ast.E1.type.isIntType() || ast.E1.type.isFloatType()))
+				reporter.reportError(errMesg[9] + ": %", ast.O.spelling,
+						ast.position);
+
+			if (!(ast.E2.type.isIntType() || ast.E2.type.isFloatType()))
+				reporter.reportError(errMesg[9] + ": %", ast.O.spelling,
+						ast.position);
+		}
 
 		return ast.type;
 	}
@@ -334,8 +398,17 @@ public final class Checker implements Visitor {
 	public Object visitCallExpr(CallExpr ast, Object o) {
 		// TODO Auto-generated method stub
 		Decl decl = idTable.retrieve(ast.I.spelling);
-		if (decl == null)
-			reporter.reportError(errMesg[5], "", ast.I.position);
+		if (decl == null) {
+			reporter.reportError(errMesg[5] + ": %", ast.I.spelling,
+					ast.position);
+		} else if (!(decl instanceof FuncDecl)) {
+			reporter.reportError(errMesg[11] + ": %", decl.I.spelling,
+					ast.I.position);
+		}
+
+		if (ast.type == null)
+			// ast.type = StdEnvironment.errorType;
+			ast.type = decl.T;
 
 		ast.I.visit(this, o);
 		ast.AL.visit(this, o);
@@ -347,11 +420,48 @@ public final class Checker implements Visitor {
 	public Object visitAssignExpr(AssignExpr ast, Object o) {
 		// TODO Auto-generated method stub
 
-		if (!ast.E2.type.assignable(ast.E1.type))
-			reporter.reportError(errMesg[6], "", ast.position);
+		if (!(ast.E1 instanceof VarExpr)) {
+			reporter.reportError(errMesg[7], "", ast.position);
+		} else {
 
-		ast.E1.visit(this, ast);
-		ast.E2.visit(this, ast);
+			Type t1AST = (Type) ast.E1.visit(this, ast);
+			if (t1AST == null)
+				t1AST = StdEnvironment.errorType;
+			if (ast.E1.type == null)
+				ast.E1.type = t1AST;
+
+			VarExpr veAST = (VarExpr) ast.E1;
+			if (veAST.V instanceof SimpleVar) {
+				SimpleVar svAST = (SimpleVar) veAST.V;
+				if (svAST.I.decl instanceof FuncDecl)
+					reporter.reportError(errMesg[11] + ": %", svAST.I.spelling,
+							svAST.I.position);
+			}
+
+			Type t2AST = (Type) ast.E2.visit(this, ast);
+			if (t2AST == null)
+				t2AST = StdEnvironment.errorType;
+			if (ast.E2.type == null)
+				ast.E2.type = t2AST;
+
+			if (!ast.E1.type.assignable(ast.E2.type))
+				reporter.reportError(errMesg[6], "", ast.position);
+
+			if (veAST.V instanceof SimpleVar) {
+				SimpleVar svAST = (SimpleVar) veAST.V;
+				if (ast.E1.type.isErrorType() || ast.E2.type.isErrorType())
+					reporter.reportError(errMesg[7] + ": %", svAST.I.spelling,
+							ast.position);
+			}
+
+			if (ast.E1.type.isFloatType() && ast.E2.type.isIntType()) {
+				Operator op = new Operator("i2f", dummyPos);
+				UnaryExpr eAST = new UnaryExpr(op, ast.E2, dummyPos);
+				eAST.type = StdEnvironment.floatType;
+				ast.E2 = eAST;
+			}
+
+		}
 		return ast.type;
 	}
 
@@ -360,23 +470,34 @@ public final class Checker implements Visitor {
 	// Always returns null. Does not use the given object.
 
 	public Object visitFuncDecl(FuncDecl ast, Object o) {
+
+		if (idTable.retrieveOneLevel(ast.I.spelling) != null)
+			reporter.reportError(errMesg[2] + ": %", ast.I.spelling,
+					ast.I.position);
+
 		idTable.insert(ast.I.spelling, ast);
 
-		// Your code goes here
 		// TODO
+
 		// HINT
 		// Pass ast as the 2nd argument (as done below) so that the
 		// formal parameters of the function an be extracted from ast when the
 		// function body is later visited
 
+		idTable.openScope();
 		ast.PL.visit(this, ast);
 
 		ast.S.visit(this, ast);
-		return null;
+		idTable.closeScope();
+		if (!ast.T.isVoidType() && ast.S.isEmptyCompStmt())
+			reporter.reportError(errMesg[31], "", ast.position);
+		return ast.T;
 	}
 
 	public Object visitDeclList(DeclList ast, Object o) {
-		ast.D.visit(this, null);
+		Type t = (Type) ast.D.visit(this, null);
+		if (ast.D.T == null)
+			ast.D.T = t;
 		ast.DL.visit(this, null);
 		return null;
 	}
@@ -388,15 +509,39 @@ public final class Checker implements Visitor {
 	public Object visitGlobalVarDecl(GlobalVarDecl ast, Object o) {
 		declareVariable(ast.I, ast);
 
-		// fill the rest
-		return o;
+		if (ast.T.isVoidType()) {
+			reporter.reportError(errMesg[3] + ": %", ast.I.spelling,
+					ast.I.position);
+		} else if (ast.T.isArrayType()) {
+			if (((ArrayType) ast.T).T.isVoidType())
+				reporter.reportError(errMesg[4] + ": %", ast.I.spelling,
+						ast.I.position);
+		}
+
+		ast.I.visit(this, ast);
+		ast.E.visit(this, ast);
+		ast.T.visit(this, ast);
+
+		return ast.T;
 	}
 
 	public Object visitLocalVarDecl(LocalVarDecl ast, Object o) {
 		declareVariable(ast.I, ast);
 
-		// fill the rest
-		return o;
+		if (ast.T.isVoidType()) {
+			reporter.reportError(errMesg[3] + ": %", ast.I.spelling,
+					ast.I.position);
+		} else if (ast.T.isArrayType()) {
+			if (((ArrayType) ast.T).T.isVoidType())
+				reporter.reportError(errMesg[4] + ": %", ast.I.spelling,
+						ast.I.position);
+		}
+
+		ast.I.visit(this, ast);
+		ast.E.visit(this, ast);
+		ast.T.visit(this, ast);
+
+		return ast.T;
 	}
 
 	/** ------------------------ Parameters-------------------------- **/
@@ -408,8 +553,8 @@ public final class Checker implements Visitor {
 	}
 
 	public Object visitParaList(ParaList ast, Object o) {
-		ast.P.visit(this, null);
-		ast.PL.visit(this, null);
+		ast.P.T = (Type) ast.P.visit(this, ast);
+		ast.PL.visit(this, ast);
 		return null;
 	}
 
@@ -424,7 +569,10 @@ public final class Checker implements Visitor {
 				reporter.reportError(errMesg[4] + ": %", ast.I.spelling,
 						ast.I.position);
 		}
-		return null;
+
+		ast.I.visit(this, ast);
+		ast.T.visit(this, ast);
+		return ast.T;
 	}
 
 	/** ------------------------ Arguments-------------------------- **/
@@ -520,12 +668,16 @@ public final class Checker implements Visitor {
 		// TODO Auto-generated method stub
 		Decl decl = idTable.retrieve(ast.I.spelling);
 
-		if (decl == null)
+		if (decl == null) {
 			reporter.reportError(errMesg[5] + ": %", ast.I.spelling,
 					ast.I.position);
+			ast.type = StdEnvironment.errorType;
+		} else {
+			ast.type = decl.T;
+		}
 		ast.I.visit(this, o);
 
-		return null;
+		return ast.type;
 	}
 
 	// Creates a small AST to represent the "declaration" of each built-in

@@ -718,14 +718,16 @@ public class Parser {
 		start(assignStartPos);
 
 		exprAST = parseCondOrExpr();
-		while (currentToken.kind == Token.EQ) {
+		if (currentToken.kind == Token.EQ) {
 			Operator opAST = acceptOperator();
-			Expr e2AST = parseCondOrExpr();
+			Expr e2AST = parseAssignExpr();
 
 			SourcePosition assignPos = new SourcePosition();
 			copyStart(assignStartPos, assignPos);
 			finish(assignPos);
-			exprAST = new BinaryExpr(exprAST, opAST, e2AST, assignPos);
+			if (e2AST == null)
+				e2AST = new EmptyExpr(dummyPos);
+			exprAST = new AssignExpr(exprAST, e2AST, assignPos);
 		}
 		return exprAST;
 	}
