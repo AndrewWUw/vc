@@ -125,8 +125,6 @@ public final class Checker implements Visitor {
         if (!(o instanceof FuncDecl))
             idTable.openScope();
 
-        // Your code goes here
-        // TODO
         ast.DL.visit(this, o);
         ast.SL.visit(this, o);
 
@@ -158,8 +156,6 @@ public final class Checker implements Visitor {
 
     @Override
     public Object visitIfStmt(IfStmt ast, Object o) {
-        // TODO Auto-generated method stub
-
         idTable.openScope();
 
         ast.E.visit(this, o);
@@ -309,7 +305,6 @@ public final class Checker implements Visitor {
 
     @Override
     public Object visitUnaryExpr(UnaryExpr ast, Object o) {
-        // TODO Auto-generated method stub
         ast.E.visit(this, o);
 
         if (ast.O.spelling.equals("&&") || ast.O.spelling.equals("||")
@@ -334,7 +329,6 @@ public final class Checker implements Visitor {
 
     @Override
     public Object visitBinaryExpr(BinaryExpr ast, Object o) {
-        // TODO Auto-generated method stub
 
         Type t1AST = (Type) ast.E1.visit(this, o);
         Type t2AST = (Type) ast.E2.visit(this, o);
@@ -367,13 +361,27 @@ public final class Checker implements Visitor {
                 ast.E2 = eAST;
             }
 
-            if (!(ast.E1.type.isIntType() || ast.E1.type.isFloatType()))
-                reporter.reportError(errMesg[9] + ": %", ast.O.spelling,
-                        ast.position);
+            if (!(ast.E1.type.isIntType() || ast.E1.type.isFloatType())) {
+                if (ast.E1.type.isArrayType())
+                    if (ast.E1 instanceof VarExpr)
+                        reporter.reportError(errMesg[11] + ": %",
+                                ((SimpleVar) ((VarExpr) ast.E1).V).I.spelling,
+                                ast.E1.position);
 
-            if (!(ast.E2.type.isIntType() || ast.E2.type.isFloatType()))
                 reporter.reportError(errMesg[9] + ": %", ast.O.spelling,
                         ast.position);
+            }
+            if (!(ast.E2.type.isIntType() || ast.E2.type.isFloatType())) {
+                if (ast.E2.type.isArrayType())
+                    if (ast.E2 instanceof VarExpr)
+                        reporter.reportError(errMesg[11] + ": %",
+                                ((SimpleVar) ((VarExpr) ast.E2).V).I.spelling,
+                                ast.E2.position);
+
+                reporter.reportError(errMesg[9] + ": %", ast.O.spelling,
+                        ast.position);
+            }
+
         }
 
         return ast.type;
@@ -381,26 +389,79 @@ public final class Checker implements Visitor {
 
     @Override
     public Object visitInitExpr(InitExpr ast, Object o) {
-        // TODO Auto-generated method stub
 
-        ast.IL.visit(this, o);
+        Decl dAST = null;
+        if (o instanceof GlobalVarDecl)
+            dAST = (GlobalVarDecl) o;
+        if (o instanceof LocalVarDecl)
+            dAST = (LocalVarDecl) o;
+
+        Type tAST = null;
+        if (dAST.T.isArrayType()) {
+            ast.IL.visit(this, o);
+
+            checkArrayInitTypes((ArrayType) dAST.T, (ExprList) ast.IL, 0);
+
+            int elemNum = Integer
+                    .parseInt(((IntExpr) ((ArrayType) dAST.T).E).IL.spelling);
+            int sum = 0;
+            ExprList elAST = (ExprList) ast.IL;
+
+            while (!elAST.isEmptyExprList()) {
+                sum++;
+                if (!elAST.EL.isEmptyExprList()) {
+                    elAST = (ExprList) elAST.EL;
+
+                } else
+                    break;
+            }
+            if (elemNum < sum)
+                reporter.reportError(errMesg[16] + ": %", dAST.I.spelling,
+                        dAST.position);
+
+            ast.type = ((ArrayType) dAST.T).T;
+        } else {
+            tAST = (Type) ast.IL.visit(this, o);
+        }
+
+        if (ast.type == null)
+            ast.type = tAST;
+
+        if (!dAST.T.assignable(ast.type) && !dAST.T.isArrayType()) {
+            reporter.reportError(errMesg[14], "", ast.IL.position);
+        }
+
         return ast.type;
+    }
+
+    public void checkArrayInitTypes(ArrayType tAST, ExprList elAST, int pos) {
+
+        Type ast = tAST.T;
+
+        if (!ast.assignable(elAST.E.type))
+            reporter.reportError(errMesg[13] + ": at position %", "" + pos,
+                    elAST.E.position);
+        if (!elAST.EL.isEmptyExprList())
+            checkArrayInitTypes(tAST, (ExprList) elAST.EL, ++pos);
+
     }
 
     @Override
     public Object visitExprList(ExprList ast, Object o) {
-        // TODO Auto-generated method stub
         ast.E.visit(this, o);
         ast.EL.visit(this, ast);
 
-        return null;
+        return ast.E.type;
     }
 
     @Override
     public Object visitArrayExpr(ArrayExpr ast, Object o) {
-        // TODO Auto-generated method stub
 
-        ast.V.visit(this, ast);
+        Type tAST = (Type) ast.V.visit(this, ast);
+        if (!tAST.isArrayType())
+            reporter.reportError(errMesg[14], "", ast.V.position);
+        if (!(ast.E instanceof IntExpr))
+            reporter.reportError(errMesg[17], "", ast.position);
         ast.E.visit(this, ast);
 
         return ast.type;
@@ -425,7 +486,7 @@ public final class Checker implements Visitor {
 
                 ast.I.visit(this, o);
                 ast.AL.visit(this, o);
-                
+
                 FuncDecl dAST = (VC.ASTs.FuncDecl) decl;
                 comparArgListToParaList((ArgList) ast.AL, (ParaList) dAST.PL);
             } else
@@ -436,23 +497,50 @@ public final class Checker implements Visitor {
 
     public void comparArgListToParaList(ArgList aL, ParaList pL) {
 
-        if (pL.isEmptyParaList() && !aL.isEmptyArgList())
-            reporter.reportError(errMesg[25], "", aL.A.position);
+        if (!pL.P.T.isArrayType()) {
+            if (pL.isEmptyParaList() && !aL.isEmptyArgList())
+                reporter.reportError(errMesg[25], "", aL.A.position);
 
-        if (!pL.isEmptyParaList() && aL.isEmptyArgList())
-            reporter.reportError(errMesg[26], "", aL.position);
+            if (!pL.isEmptyParaList() && aL.isEmptyArgList())
+                reporter.reportError(errMesg[26], "", aL.position);
 
-        if (!pL.P.T.assignable(aL.A.type))
-            reporter.reportError(errMesg[27] + ": %", pL.P.I.spelling,
-                    aL.A.position);
+            if (!pL.P.T.assignable(aL.A.type))
+                reporter.reportError(errMesg[27] + ": %", pL.P.I.spelling,
+                        aL.A.position);
 
-        if (!aL.AL.isEmptyArgList() && !pL.PL.isEmptyParaList()) {
-            comparArgListToParaList((ArgList) aL.AL, (ParaList) pL.PL);
-        } else if (aL.AL.isEmptyArgList()) {
-            reporter.reportError(errMesg[26], "", aL.A.position);
-        } else if (pL.PL.isEmptyParaList()) {
-            reporter.reportError(errMesg[25], "", aL.AL.position);
+            if (!aL.AL.isEmptyArgList() && !pL.PL.isEmptyParaList()) {
+                comparArgListToParaList((ArgList) aL.AL, (ParaList) pL.PL);
+            } else if (aL.AL.isEmptyArgList() && !pL.PL.isEmptyParaList()) {
+                reporter.reportError(errMesg[26], "", aL.A.position);
+            } else if (!aL.AL.isEmptyArgList() && pL.PL.isEmptyParaList()) {
+                reporter.reportError(errMesg[25], "", aL.AL.position);
+            }
+        } else {
+            if (!aL.A.type.isArrayType()) {
+                reporter.reportError(errMesg[27] + ": %", pL.P.I.spelling,
+                        aL.A.position);
+            } else {
+                ArrayType platAST = (ArrayType) pL.P.T;
+                ArrayType alatAST = (ArrayType) aL.A.type;
+
+                if (!platAST.T.assignable(alatAST.T))
+                    reporter.reportError(errMesg[27] + ": %", pL.P.I.spelling,
+                            aL.A.position);
+
+                if (!aL.AL.isEmptyArgList() && !pL.PL.isEmptyParaList()) {
+                    comparArgListToParaList((ArgList) aL.AL, (ParaList) pL.PL);
+                } else if (aL.AL.isEmptyArgList() && !pL.PL.isEmptyParaList()) {
+                    reporter.reportError(errMesg[26], "", aL.A.position);
+                } else if (!aL.AL.isEmptyArgList() && pL.PL.isEmptyParaList()) {
+                    reporter.reportError(errMesg[25], "", aL.AL.position);
+                }
+            }
         }
+
+    }
+
+    public void compareArrListToArrayParaList() {
+
     }
 
     @Override
@@ -564,6 +652,9 @@ public final class Checker implements Visitor {
             if (((ArrayType) ast.T).T.isVoidType())
                 reporter.reportError(errMesg[4] + ": %", ast.I.spelling,
                         ast.I.position);
+            if (!ast.E.isEmptyExpr() && !(ast.E instanceof InitExpr))
+                reporter.reportError(errMesg[15] + ": %", ast.I.spelling,
+                        ast.position);
         }
 
         ast.I.visit(this, ast);
@@ -583,6 +674,9 @@ public final class Checker implements Visitor {
             if (((ArrayType) ast.T).T.isVoidType())
                 reporter.reportError(errMesg[4] + ": %", ast.I.spelling,
                         ast.I.position);
+            if (!ast.E.isEmptyExpr() && !(ast.E instanceof InitExpr))
+                reporter.reportError(errMesg[15] + ": %", ast.I.spelling,
+                        ast.position);
         }
 
         ast.I.visit(this, ast);
@@ -681,7 +775,16 @@ public final class Checker implements Visitor {
 
     @Override
     public Object visitArrayType(ArrayType ast, Object o) {
-        // TODO Auto-generated method stub
+        Decl vAST = null;
+
+        if (o instanceof GlobalVarDecl)
+            vAST = (GlobalVarDecl) o;
+        else if (o instanceof LocalVarDecl)
+            vAST = (LocalVarDecl) o;
+
+        if (ast.E.isEmptyExpr() && vAST != null)
+            reporter.reportError(errMesg[18] + ": %", vAST.I.spelling,
+                    ast.position);
         return null;
     }
 
