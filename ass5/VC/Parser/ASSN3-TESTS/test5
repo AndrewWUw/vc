@@ -1,0 +1,5 @@
+void main() {  
+int i;
+float f = 1.2 / g(1) + a[2];
+boolean b1 = true, b2 = false; 
+}

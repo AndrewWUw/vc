@@ -1,0 +1,6 @@
+int i, j, k;
+void f() { }
+boolean b[10], a[100];
+boolean g(int i) { }
+void h(boolean b) { }
+float f = 3.0, j = 1;

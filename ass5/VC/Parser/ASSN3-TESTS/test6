@@ -1,0 +1,6 @@
+void main() {  
+int i;
+float j = i;
+boolean b = j[i[i]] = i;
+float f;
+}
