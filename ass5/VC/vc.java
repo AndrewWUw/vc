@@ -40,24 +40,15 @@ public class vc {
 		System.out.println("\nUsage: java VC.vc [-options] filename");
 		System.out.println();
 		System.out.println("where options include:");
-		System.out
-				.println("	-d [1234]           display the AST (without SourcePosition)");
-		System.out
-				.println("	                    1:  the AST from the parser (without SourcePosition)");
-		System.out
-				.println("	                    2:  the AST from the parser (with SourcePosition)");
-		System.out
-				.println("	                    3:  the AST from the checker (without SourcePosition)");
-		System.out
-				.println("	                    4:  the AST from the checker (with SourcePosition)");
-		System.out
-				.println("	-t [file]           print the (non-annotated) AST into <file>");
-		System.out
-				.println("	                    (or filename + \"t\" if <file> is unspecified)");
-		System.out
-				.println("	-u [file]  	    unparse the (non-annotated) AST into <file>");
-		System.out
-				.println("	                    (or filename + \"u\" if <file> is unspecified)");
+		System.out.println("	-d [1234]           display the AST (without SourcePosition)");
+		System.out.println("	                    1:  the AST from the parser (without SourcePosition)");
+		System.out.println("	                    2:  the AST from the parser (with SourcePosition)");
+		System.out.println("	                    3:  the AST from the checker (without SourcePosition)");
+		System.out.println("	                    4:  the AST from the checker (with SourcePosition)");
+		System.out.println("	-t [file]           print the (non-annotated) AST into <file>");
+		System.out.println("	                    (or filename + \"t\" if <file> is unspecified)");
+		System.out.println("	-u [file]  	    unparse the (non-annotated) AST into <file>");
+		System.out.println("	                    (or filename + \"u\" if <file> is unspecified)");
 		System.exit(1);
 	}
 
