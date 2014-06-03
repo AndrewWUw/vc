@@ -5,8 +5,6 @@
 
 package VC.Checker;
 
-import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
-
 import VC.ASTs.*;
 import VC.Scanner.SourcePosition;
 import VC.ErrorReporter;

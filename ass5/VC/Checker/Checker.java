@@ -1,15 +1,11 @@
 package VC.Checker;
 
-import VC.ASTs.ArrayType;
-import VC.ASTs.Expr;
-import VC.ASTs.FuncDecl;
-import VC.ASTs.GlobalVarDecl;
-import VC.ASTs.Ident;
-import VC.ASTs.Type;
+import VC.ASTs.*;
+import VC.Scanner.SourcePosition;
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
-public final class Checker implements VC.ASTs.Visitor {
+public final class Checker implements Visitor {
 	private String errMesg[] = {
 			"*0: main function is missing",
 			"*1: return type of main is not int",
@@ -80,9 +76,8 @@ public final class Checker implements VC.ASTs.Visitor {
 	}
 
 	private Expr i2f(Expr paramExpr) {
-		VC.ASTs.UnaryExpr localUnaryExpr = new VC.ASTs.UnaryExpr(
-				new VC.ASTs.Operator("i2f", paramExpr.position), paramExpr,
-				paramExpr.position);
+		UnaryExpr localUnaryExpr = new UnaryExpr(new Operator("i2f",
+				paramExpr.position), paramExpr, paramExpr.position);
 		localUnaryExpr.type = StdEnvironment.floatType;
 		localUnaryExpr.parent = paramExpr;
 		return localUnaryExpr;
@@ -99,7 +94,7 @@ public final class Checker implements VC.ASTs.Visitor {
 		return paramExpr;
 	}
 
-	private void declareVariable(Ident paramIdent, VC.ASTs.Decl paramDecl) {
+	private void declareVariable(Ident paramIdent, Decl paramDecl) {
 		IdEntry localIdEntry = this.idTable
 				.retrieveOneLevel(paramIdent.spelling);
 
@@ -111,7 +106,7 @@ public final class Checker implements VC.ASTs.Visitor {
 		this.idTable.insert(paramIdent.spelling, paramDecl);
 	}
 
-	private void declareFunction(Ident paramIdent, VC.ASTs.Decl paramDecl) {
+	private void declareFunction(Ident paramIdent, Decl paramDecl) {
 		IdEntry localIdEntry = this.idTable
 				.retrieveOneLevel(paramIdent.spelling);
 
@@ -134,176 +129,151 @@ public final class Checker implements VC.ASTs.Visitor {
 					paramSourcePosition);
 	}
 
-	public void check(VC.ASTs.AST paramAST) {
+	public void check(AST paramAST) {
 		paramAST.visit(this, null);
 	}
 
-	public Object visitProgram(VC.ASTs.Program paramProgram, Object paramObject) {
-		paramProgram.FL.visit(this, null);
+	public Object visitProgram(Program ast, Object o) {
+		ast.FL.visit(this, null);
 
-		VC.ASTs.Decl localDecl = this.idTable.retrieve("main");
+		Decl localDecl = this.idTable.retrieve("main");
 		if ((localDecl == null) || (!(localDecl instanceof FuncDecl))) {
-			this.reporter.reportError(this.errMesg[0], "",
-					paramProgram.position);
+			this.reporter.reportError(this.errMesg[0], "", ast.position);
 		} else if (!StdEnvironment.intType.equals(((FuncDecl) localDecl).T))
-			this.reporter.reportError(this.errMesg[1], "",
-					paramProgram.position);
+			this.reporter.reportError(this.errMesg[1], "", ast.position);
 		return null;
 	}
 
-	public Object visitIfStmt(VC.ASTs.IfStmt paramIfStmt, Object paramObject) {
-		Type localType = (Type) paramIfStmt.E.visit(this, null);
+	public Object visitIfStmt(IfStmt ast, Object o) {
+		Type localType = (Type) ast.E.visit(this, null);
 		if (!localType.equals(StdEnvironment.booleanType))
 			this.reporter.reportError(this.errMesg[20] + " (found: "
-					+ localType.toString() + ")", "", paramIfStmt.E.position);
-		paramIfStmt.S1.visit(this, paramObject);
-		paramIfStmt.S2.visit(this, paramObject);
+					+ localType.toString() + ")", "", ast.E.position);
+		ast.S1.visit(this, o);
+		ast.S2.visit(this, o);
 		return null;
 	}
 
-	public Object visitCompoundStmt(VC.ASTs.CompoundStmt paramCompoundStmt,
-			Object paramObject) {
+	public Object visitCompoundStmt(CompoundStmt ast, Object o) {
 		this.idTable.openScope();
-		if ((paramObject != null) && ((paramObject instanceof FuncDecl))) {
+		if ((o != null) && ((o instanceof FuncDecl))) {
 
-			FuncDecl localFuncDecl = (FuncDecl) paramObject;
+			FuncDecl localFuncDecl = (FuncDecl) o;
 			localFuncDecl.PL.visit(this, null);
-			paramCompoundStmt.DL.visit(this, null);
-			paramCompoundStmt.SL.visit(this,
-					(Type) localFuncDecl.T.visit(this, null));
+			ast.DL.visit(this, null);
+			ast.SL.visit(this, (Type) localFuncDecl.T.visit(this, null));
 		} else {
-			paramCompoundStmt.DL.visit(this, null);
-			paramCompoundStmt.SL.visit(this, paramObject);
+			ast.DL.visit(this, null);
+			ast.SL.visit(this, o);
 		}
 		this.idTable.closeScope();
 		return null;
 	}
 
-	public Object visitStmtList(VC.ASTs.StmtList paramStmtList,
-			Object paramObject) {
-		paramStmtList.S.visit(this, paramObject);
-		if (((paramStmtList.S instanceof VC.ASTs.ReturnStmt))
-				&& ((paramStmtList.SL instanceof VC.ASTs.StmtList))) {
-			this.reporter.reportError(this.errMesg[30], "",
-					paramStmtList.SL.position);
+	public Object visitStmtList(StmtList ast, Object o) {
+		ast.S.visit(this, o);
+		if (((ast.S instanceof ReturnStmt)) && ((ast.SL instanceof StmtList))) {
+			this.reporter.reportError(this.errMesg[30], "", ast.SL.position);
 		}
-		paramStmtList.SL.visit(this, paramObject);
+		ast.SL.visit(this, o);
 		return null;
 	}
 
-	public Object visitForStmt(VC.ASTs.ForStmt paramForStmt, Object paramObject) {
+	public Object visitForStmt(ForStmt ast, Object o) {
 		this.whileLevel += 1;
-		paramForStmt.E1.visit(this, null);
-		Type localType = (Type) paramForStmt.E2.visit(this, null);
-		if ((!paramForStmt.E2.isEmptyExpr())
+		ast.E1.visit(this, null);
+		Type localType = (Type) ast.E2.visit(this, null);
+		if ((!ast.E2.isEmptyExpr())
 				&& (!localType.equals(StdEnvironment.booleanType)))
 			this.reporter.reportError(this.errMesg[21] + " (found: "
-					+ localType.toString() + ")", "", paramForStmt.E2.position);
-		paramForStmt.E3.visit(this, null);
-		paramForStmt.S.visit(this, paramObject);
+					+ localType.toString() + ")", "", ast.E2.position);
+		ast.E3.visit(this, null);
+		ast.S.visit(this, o);
 		this.whileLevel -= 1;
 		return null;
 	}
 
-	public Object visitWhileStmt(VC.ASTs.WhileStmt paramWhileStmt,
-			Object paramObject) {
+	public Object visitWhileStmt(WhileStmt ast, Object o) {
 		this.whileLevel += 1;
-		Type localType = (Type) paramWhileStmt.E.visit(this, null);
+		Type localType = (Type) ast.E.visit(this, null);
 		if (!localType.equals(StdEnvironment.booleanType))
-			this.reporter
-					.reportError(
-							this.errMesg[22] + " (found: "
-									+ localType.toString() + ")", "",
-							paramWhileStmt.E.position);
-		paramWhileStmt.S.visit(this, paramObject);
+			this.reporter.reportError(this.errMesg[22] + " (found: "
+					+ localType.toString() + ")", "", ast.E.position);
+		ast.S.visit(this, o);
 		this.whileLevel -= 1;
 		return null;
 	}
 
-	public Object visitBreakStmt(VC.ASTs.BreakStmt paramBreakStmt,
-			Object paramObject) {
+	public Object visitBreakStmt(BreakStmt ast, Object o) {
 		if (this.whileLevel < 1)
-			this.reporter.reportError(this.errMesg[23], "",
-					paramBreakStmt.position);
+			this.reporter.reportError(this.errMesg[23], "", ast.position);
 		return null;
 	}
 
-	public Object visitContinueStmt(VC.ASTs.ContinueStmt paramContinueStmt,
-			Object paramObject) {
+	public Object visitContinueStmt(ContinueStmt ast, Object o) {
 		if (this.whileLevel < 1)
-			this.reporter.reportError(this.errMesg[24], "",
-					paramContinueStmt.position);
+			this.reporter.reportError(this.errMesg[24], "", ast.position);
 		return null;
 	}
 
-	public Object visitReturnStmt(VC.ASTs.ReturnStmt paramReturnStmt,
-			Object paramObject) {
-		Type localType = (Type) paramObject;
-		paramReturnStmt.E.visit(this, paramObject);
-		paramReturnStmt.E = checkAssignment(localType, paramReturnStmt.E,
-				this.errMesg[8], paramReturnStmt.position);
+	public Object visitReturnStmt(ReturnStmt ast, Object o) {
+		Type localType = (Type) o;
+		ast.E.visit(this, o);
+		ast.E = checkAssignment(localType, ast.E, this.errMesg[8], ast.position);
 		return null;
 	}
 
-	public Object visitExprStmt(VC.ASTs.ExprStmt paramExprStmt,
-			Object paramObject) {
-		paramExprStmt.E.visit(this, paramObject);
+	public Object visitExprStmt(ExprStmt ast, Object o) {
+		ast.E.visit(this, o);
 		return null;
 	}
 
-	public Object visitEmptyCompStmt(VC.ASTs.EmptyCompStmt paramEmptyCompStmt,
-			Object paramObject) {
+	public Object visitEmptyCompStmt(EmptyCompStmt ast, Object o) {
 		this.idTable.openScope();
-		if ((paramObject != null) && ((paramObject instanceof FuncDecl))) {
+		if ((o != null) && ((o instanceof FuncDecl))) {
 
-			FuncDecl localFuncDecl = (FuncDecl) paramObject;
+			FuncDecl localFuncDecl = (FuncDecl) o;
 			localFuncDecl.PL.visit(this, null);
 		}
 		this.idTable.closeScope();
 		return null;
 	}
 
-	public Object visitEmptyStmt(VC.ASTs.EmptyStmt paramEmptyStmt,
-			Object paramObject) {
+	public Object visitEmptyStmt(EmptyStmt ast, Object o) {
 		return null;
 	}
 
-	public Object visitEmptyStmtList(VC.ASTs.EmptyStmtList paramEmptyStmtList,
-			Object paramObject) {
+	public Object visitEmptyStmtList(EmptyStmtList ast, Object o) {
 		return null;
 	}
 
-	public Object visitAssignExpr(VC.ASTs.AssignExpr paramAssignExpr,
-			Object paramObject) {
-		paramAssignExpr.E1.visit(this, paramObject);
-		paramAssignExpr.E2.visit(this, null);
+	public Object visitAssignExpr(AssignExpr ast, Object o) {
+		ast.E1.visit(this, o);
+		ast.E2.visit(this, null);
 
-		if ((!(paramAssignExpr.E1 instanceof VC.ASTs.VarExpr))
-				&& (!(paramAssignExpr.E1 instanceof VC.ASTs.ArrayExpr))) {
-			this.reporter.reportError(this.errMesg[7], "",
-					paramAssignExpr.position);
-		} else if ((paramAssignExpr.E1 instanceof VC.ASTs.VarExpr)) {
-			VC.ASTs.SimpleVar localSimpleVar = (VC.ASTs.SimpleVar) ((VC.ASTs.VarExpr) paramAssignExpr.E1).V;
-			VC.ASTs.Decl localDecl = (VC.ASTs.Decl) localSimpleVar.I.decl;
+		if ((!(ast.E1 instanceof VarExpr)) && (!(ast.E1 instanceof ArrayExpr))) {
+			this.reporter.reportError(this.errMesg[7], "", ast.position);
+		} else if ((ast.E1 instanceof VarExpr)) {
+			SimpleVar localSimpleVar = (SimpleVar) ((VarExpr) ast.E1).V;
+			Decl localDecl = (Decl) localSimpleVar.I.decl;
 			if ((localDecl instanceof FuncDecl)) {
 				this.reporter.reportError(this.errMesg[7] + ": %",
-						localSimpleVar.I.spelling, paramAssignExpr.position);
+						localSimpleVar.I.spelling, ast.position);
 			}
 		}
 
-		paramAssignExpr.E2 = checkAssignment(paramAssignExpr.E1.type,
-				paramAssignExpr.E2, this.errMesg[6], paramAssignExpr.position);
+		ast.E2 = checkAssignment(ast.E1.type, ast.E2, this.errMesg[6],
+				ast.position);
 
-		paramAssignExpr.type = paramAssignExpr.E2.type;
-		return paramAssignExpr.type;
+		ast.type = ast.E2.type;
+		return ast.type;
 	}
 
-	public Object visitBinaryExpr(VC.ASTs.BinaryExpr paramBinaryExpr,
-			Object paramObject) {
-		Type localType1 = (Type) paramBinaryExpr.E1.visit(this, paramObject);
-		Type localType2 = (Type) paramBinaryExpr.E2.visit(this, paramObject);
+	public Object visitBinaryExpr(BinaryExpr ast, Object o) {
+		Type localType1 = (Type) ast.E1.visit(this, o);
+		Type localType2 = (Type) ast.E2.visit(this, o);
 		Type localType3 = localType1;
-		String str = paramBinaryExpr.O.spelling;
+		String str = ast.O.spelling;
 		int i = 0;
 
 		int j = (str.equals("&&")) || (str.equals("||")) ? 1 : 0;
@@ -322,38 +292,37 @@ public final class Checker implements VC.ASTs.Visitor {
 		} else if ((localType1.isBooleanType()) || (localType2.isBooleanType())) {
 			if ((!localType1.equals(localType2)) || ((j == 0) && (k == 0)))
 				i = 1;
-			paramBinaryExpr.O.spelling = ("i" + paramBinaryExpr.O.spelling);
+			ast.O.spelling = ("i" + ast.O.spelling);
 		} else if (j != 0) {
 			i = 1;
 		} else if (!localType1.equals(localType2)) {
 			localType3 = StdEnvironment.floatType;
-			paramBinaryExpr.O.spelling = ("f" + paramBinaryExpr.O.spelling);
+			ast.O.spelling = ("f" + ast.O.spelling);
 			if (!localType3.equals(localType1)) {
-				paramBinaryExpr.E1 = i2f(paramBinaryExpr.E1);
+				ast.E1 = i2f(ast.E1);
 			} else {
-				paramBinaryExpr.E2 = i2f(paramBinaryExpr.E2);
+				ast.E2 = i2f(ast.E2);
 			}
 		} else if (localType1.isFloatType()) {
-			paramBinaryExpr.O.spelling = ("f" + paramBinaryExpr.O.spelling);
+			ast.O.spelling = ("f" + ast.O.spelling);
 		} else {
-			paramBinaryExpr.O.spelling = ("i" + paramBinaryExpr.O.spelling);
+			ast.O.spelling = ("i" + ast.O.spelling);
 		}
 
 		if (i != 0) {
 			this.reporter.reportError(this.errMesg[9] + ": %", str,
-					paramBinaryExpr.position);
+					ast.position);
 			localType3 = StdEnvironment.errorType;
 		}
 
-		paramBinaryExpr.type = ((k != 0) || (m != 0) ? StdEnvironment.booleanType
+		ast.type = ((k != 0) || (m != 0) ? StdEnvironment.booleanType
 				: localType3);
-		return paramBinaryExpr.type;
+		return ast.type;
 	}
 
-	public Object visitUnaryExpr(VC.ASTs.UnaryExpr paramUnaryExpr,
-			Object paramObject) {
-		Type localType = (Type) paramUnaryExpr.E.visit(this, paramObject);
-		String str = paramUnaryExpr.O.spelling;
+	public Object visitUnaryExpr(UnaryExpr ast, Object o) {
+		Type localType = (Type) ast.E.visit(this, o);
+		String str = ast.O.spelling;
 		int i = 0;
 
 		if (localType.isErrorType()) {
@@ -370,309 +339,267 @@ public final class Checker implements VC.ASTs.Visitor {
 
 		if (i != 0) {
 			this.reporter.reportError(this.errMesg[10] + ": %", str,
-					paramUnaryExpr.position);
+					ast.position);
 			localType = StdEnvironment.errorType;
 		} else if (localType.isFloatType()) {
-			paramUnaryExpr.O.spelling = ("f" + paramUnaryExpr.O.spelling);
+			ast.O.spelling = ("f" + ast.O.spelling);
 		} else {
-			paramUnaryExpr.O.spelling = ("i" + paramUnaryExpr.O.spelling);
+			ast.O.spelling = ("i" + ast.O.spelling);
 		}
 
-		paramUnaryExpr.type = localType;
-		return paramUnaryExpr.type;
+		ast.type = localType;
+		return ast.type;
 	}
 
-	public Object visitCallExpr(VC.ASTs.CallExpr paramCallExpr,
-			Object paramObject) {
-		VC.ASTs.Decl localDecl = (VC.ASTs.Decl) paramCallExpr.I.visit(this,
-				null);
+	public Object visitCallExpr(CallExpr ast, Object o) {
+		Decl localDecl = (Decl) ast.I.visit(this, null);
 		if (localDecl == null) {
-			this.reporter.reportError(this.errMesg[5] + ": %",
-					paramCallExpr.I.spelling, paramCallExpr.position);
-			paramCallExpr.type = StdEnvironment.errorType;
+			this.reporter.reportError(this.errMesg[5] + ": %", ast.I.spelling,
+					ast.position);
+			ast.type = StdEnvironment.errorType;
 		} else if ((localDecl instanceof FuncDecl)) {
-			paramCallExpr.AL.visit(this, ((FuncDecl) localDecl).PL);
-			paramCallExpr.type = ((FuncDecl) localDecl).T;
+			ast.AL.visit(this, ((FuncDecl) localDecl).PL);
+			ast.type = ((FuncDecl) localDecl).T;
 		} else {
-			this.reporter.reportError(this.errMesg[19] + ": %",
-					paramCallExpr.I.spelling, paramCallExpr.I.position);
-			paramCallExpr.type = StdEnvironment.errorType;
+			this.reporter.reportError(this.errMesg[19] + ": %", ast.I.spelling,
+					ast.I.position);
+			ast.type = StdEnvironment.errorType;
 		}
-		return paramCallExpr.type;
+		return ast.type;
 	}
 
-	public Object visitArrayExpr(VC.ASTs.ArrayExpr paramArrayExpr,
-			Object paramObject) {
-		Type localType1 = (Type) paramArrayExpr.V.visit(this, paramObject);
+	public Object visitArrayExpr(ArrayExpr ast, Object o) {
+		Type localType1 = (Type) ast.V.visit(this, o);
 		if (localType1.isArrayType()) {
 			localType1 = ((ArrayType) localType1).T;
 		} else if (!localType1.isErrorType()) {
-			this.reporter.reportError(this.errMesg[12], "",
-					paramArrayExpr.position);
+			this.reporter.reportError(this.errMesg[12], "", ast.position);
 			localType1 = StdEnvironment.errorType;
 		}
 
-		Type localType2 = (Type) paramArrayExpr.E.visit(this, paramObject);
+		Type localType2 = (Type) ast.E.visit(this, o);
 		if ((!localType2.isIntType()) && (!localType2.isErrorType())) {
-			this.reporter.reportError(this.errMesg[17], "",
-					paramArrayExpr.position);
+			this.reporter.reportError(this.errMesg[17], "", ast.position);
 		}
-		paramArrayExpr.type = localType1;
+		ast.type = localType1;
 		return localType1;
 	}
 
-	public Object visitInitExpr(VC.ASTs.InitExpr paramInitExpr,
-			Object paramObject) {
-		Type localType = (Type) paramObject;
+	public Object visitInitExpr(InitExpr ast, Object o) {
+		Type localType = (Type) o;
 		if (!localType.isArrayType()) {
-			this.reporter.reportError(this.errMesg[14], " ",
-					paramInitExpr.position);
-			paramInitExpr.type = StdEnvironment.errorType;
-			return paramInitExpr.type;
+			this.reporter.reportError(this.errMesg[14], " ", ast.position);
+			ast.type = StdEnvironment.errorType;
+			return ast.type;
 		}
-		return paramInitExpr.IL.visit(this, ((ArrayType) localType).T);
+		return ast.IL.visit(this, ((ArrayType) localType).T);
 	}
 
-	public Object visitExprList(VC.ASTs.ExprList paramExprList,
-			Object paramObject) {
-		Type localType = (Type) paramObject;
-		paramExprList.E.visit(this, paramObject);
-		paramExprList.E = checkAssignment(localType, paramExprList.E,
-				this.errMesg[13] + ": at position " + paramExprList.index,
-				paramExprList.E.position);
+	public Object visitExprList(ExprList ast, Object o) {
+		Type localType = (Type) o;
+		ast.E.visit(this, o);
+		ast.E = checkAssignment(localType, ast.E, this.errMesg[13]
+				+ ": at position " + ast.index, ast.E.position);
 
-		if ((paramExprList.EL instanceof VC.ASTs.ExprList)) {
-			((VC.ASTs.ExprList) paramExprList.EL).index = (paramExprList.index + 1);
-			return paramExprList.EL.visit(this, paramObject);
+		if ((ast.EL instanceof ExprList)) {
+			((ExprList) ast.EL).index = (ast.index + 1);
+			return ast.EL.visit(this, o);
 		}
-		return new Integer(paramExprList.index + 1);
+		return new Integer(ast.index + 1);
 	}
 
-	public Object visitEmptyExprList(VC.ASTs.EmptyExprList paramEmptyExprList,
-			Object paramObject) {
+	public Object visitEmptyExprList(EmptyExprList ast, Object o) {
 		return null;
 	}
 
-	public Object visitEmptyExpr(VC.ASTs.EmptyExpr paramEmptyExpr,
-			Object paramObject) {
-		if ((paramEmptyExpr.parent instanceof VC.ASTs.ReturnStmt)) {
-			paramEmptyExpr.type = StdEnvironment.voidType;
+	public Object visitEmptyExpr(EmptyExpr ast, Object o) {
+		if ((ast.parent instanceof ReturnStmt)) {
+			ast.type = StdEnvironment.voidType;
 		} else
-			paramEmptyExpr.type = StdEnvironment.errorType;
-		return paramEmptyExpr.type;
+			ast.type = StdEnvironment.errorType;
+		return ast.type;
 	}
 
-	public Object visitBooleanExpr(VC.ASTs.BooleanExpr paramBooleanExpr,
-			Object paramObject) {
-		paramBooleanExpr.type = StdEnvironment.booleanType;
-		return paramBooleanExpr.type;
+	public Object visitBooleanExpr(BooleanExpr ast, Object o) {
+		ast.type = StdEnvironment.booleanType;
+		return ast.type;
 	}
 
-	public Object visitIntExpr(VC.ASTs.IntExpr paramIntExpr, Object paramObject) {
-		paramIntExpr.type = StdEnvironment.intType;
-		return paramIntExpr.type;
+	public Object visitIntExpr(IntExpr ast, Object o) {
+		ast.type = StdEnvironment.intType;
+		return ast.type;
 	}
 
-	public Object visitFloatExpr(VC.ASTs.FloatExpr paramFloatExpr,
-			Object paramObject) {
-		paramFloatExpr.type = StdEnvironment.floatType;
-		return paramFloatExpr.type;
+	public Object visitFloatExpr(FloatExpr ast, Object o) {
+		ast.type = StdEnvironment.floatType;
+		return ast.type;
 	}
 
-	public Object visitVarExpr(VC.ASTs.VarExpr paramVarExpr, Object paramObject) {
-		paramVarExpr.type = ((Type) paramVarExpr.V.visit(this, null));
-		return paramVarExpr.type;
+	public Object visitVarExpr(VarExpr ast, Object o) {
+		ast.type = ((Type) ast.V.visit(this, null));
+		return ast.type;
 	}
 
-	public Object visitStringExpr(VC.ASTs.StringExpr paramStringExpr,
-			Object paramObject) {
-		paramStringExpr.type = StdEnvironment.stringType;
-		return paramStringExpr.type;
+	public Object visitStringExpr(StringExpr ast, Object o) {
+		ast.type = StdEnvironment.stringType;
+		return ast.type;
 	}
 
-	public Object visitFuncDecl(FuncDecl paramFuncDecl, Object paramObject) {
-		declareFunction(paramFuncDecl.I, paramFuncDecl);
+	public Object visitFuncDecl(FuncDecl ast, Object o) {
+		declareFunction(ast.I, ast);
 
-		if ((paramFuncDecl.S.isEmptyCompStmt())
-				&& (!paramFuncDecl.T.equals(StdEnvironment.voidType))) {
-			this.reporter.reportError(this.errMesg[31], "",
-					paramFuncDecl.position);
+		if ((ast.S.isEmptyCompStmt())
+				&& (!ast.T.equals(StdEnvironment.voidType))) {
+			this.reporter.reportError(this.errMesg[31], "", ast.position);
 		}
 
-		paramFuncDecl.S.visit(this, paramFuncDecl);
+		ast.S.visit(this, ast);
 
 		return null;
 	}
 
-	public Object visitDeclList(VC.ASTs.DeclList paramDeclList,
-			Object paramObject) {
-		paramDeclList.D.visit(this, null);
-		paramDeclList.DL.visit(this, null);
+	public Object visitDeclList(DeclList ast, Object o) {
+		ast.D.visit(this, null);
+		ast.DL.visit(this, null);
 		return null;
 	}
 
-	public Object visitEmptyDeclList(VC.ASTs.EmptyDeclList paramEmptyDeclList,
-			Object paramObject) {
+	public Object visitEmptyDeclList(EmptyDeclList ast, Object o) {
 		return null;
 	}
 
-	public Object visitGlobalVarDecl(GlobalVarDecl paramGlobalVarDecl,
-			Object paramObject) {
-		declareVariable(paramGlobalVarDecl.I, paramGlobalVarDecl);
+	public Object visitGlobalVarDecl(GlobalVarDecl ast, Object o) {
+		declareVariable(ast.I, ast);
 
-		if (paramGlobalVarDecl.T.isVoidType()) {
-			this.reporter.reportError(this.errMesg[3] + ": %",
-					paramGlobalVarDecl.I.spelling,
-					paramGlobalVarDecl.I.position);
-		} else if (paramGlobalVarDecl.T.isArrayType()) {
-			if (((ArrayType) paramGlobalVarDecl.T).T.isVoidType())
+		if (ast.T.isVoidType()) {
+			this.reporter.reportError(this.errMesg[3] + ": %", ast.I.spelling,
+					ast.I.position);
+		} else if (ast.T.isArrayType()) {
+			if (((ArrayType) ast.T).T.isVoidType())
 				this.reporter.reportError(this.errMesg[4] + ": %",
-						paramGlobalVarDecl.I.spelling,
-						paramGlobalVarDecl.I.position);
-			if ((((ArrayType) paramGlobalVarDecl.T).E.isEmptyExpr())
-					&& (!(paramGlobalVarDecl.E instanceof VC.ASTs.InitExpr))) {
+						ast.I.spelling, ast.I.position);
+			if ((((ArrayType) ast.T).E.isEmptyExpr())
+					&& (!(ast.E instanceof InitExpr))) {
 				this.reporter.reportError(this.errMesg[18] + ": %",
-						paramGlobalVarDecl.I.spelling,
-						paramGlobalVarDecl.I.position);
+						ast.I.spelling, ast.I.position);
 			}
 		}
-		Object localObject = paramGlobalVarDecl.E.visit(this,
-				paramGlobalVarDecl.T);
+		Object localObject = ast.E.visit(this, ast.T);
 
-		if (paramGlobalVarDecl.T.isArrayType()) {
-			if ((paramGlobalVarDecl.E instanceof VC.ASTs.InitExpr)) {
+		if (ast.T.isArrayType()) {
+			if ((ast.E instanceof InitExpr)) {
 				Integer localInteger = (Integer) localObject;
-				ArrayType localArrayType = (ArrayType) paramGlobalVarDecl.T;
+				ArrayType localArrayType = (ArrayType) ast.T;
 				if (localArrayType.E.isEmptyExpr()) {
-					localArrayType.E = new VC.ASTs.IntExpr(
-							new VC.ASTs.IntLiteral(localInteger.toString(),
-									dummyPos), dummyPos);
+					localArrayType.E = new IntExpr(new IntLiteral(
+							localInteger.toString(), dummyPos), dummyPos);
 				} else {
 					int i = Integer
-							.parseInt(((VC.ASTs.IntExpr) localArrayType.E).IL.spelling);
+							.parseInt(((IntExpr) localArrayType.E).IL.spelling);
 					int j = localInteger.intValue();
 					if (i < j)
 						this.reporter.reportError(this.errMesg[16] + ": %",
-								paramGlobalVarDecl.I.spelling,
-								paramGlobalVarDecl.position);
+								ast.I.spelling, ast.position);
 				}
-			} else if (!paramGlobalVarDecl.E.isEmptyExpr()) {
+			} else if (!ast.E.isEmptyExpr()) {
 				this.reporter.reportError(this.errMesg[15] + ": %",
-						paramGlobalVarDecl.I.spelling,
-						paramGlobalVarDecl.position);
+						ast.I.spelling, ast.position);
 			}
 		} else {
-			paramGlobalVarDecl.E = checkAssignment(paramGlobalVarDecl.T,
-					paramGlobalVarDecl.E, this.errMesg[6],
-					paramGlobalVarDecl.position);
+			ast.E = checkAssignment(ast.T, ast.E, this.errMesg[6], ast.position);
 		}
 		return null;
 	}
 
-	public Object visitLocalVarDecl(VC.ASTs.LocalVarDecl paramLocalVarDecl,
-			Object paramObject) {
-		declareVariable(paramLocalVarDecl.I, paramLocalVarDecl);
+	public Object visitLocalVarDecl(LocalVarDecl ast, Object o) {
+		declareVariable(ast.I, ast);
 
-		if (paramLocalVarDecl.T.isVoidType()) {
-			this.reporter.reportError(this.errMesg[3] + ": %",
-					paramLocalVarDecl.I.spelling, paramLocalVarDecl.I.position);
-		} else if (paramLocalVarDecl.T.isArrayType()) {
-			if (((ArrayType) paramLocalVarDecl.T).T.isVoidType())
+		if (ast.T.isVoidType()) {
+			this.reporter.reportError(this.errMesg[3] + ": %", ast.I.spelling,
+					ast.I.position);
+		} else if (ast.T.isArrayType()) {
+			if (((ArrayType) ast.T).T.isVoidType())
 				this.reporter.reportError(this.errMesg[4] + ": %",
-						paramLocalVarDecl.I.spelling,
-						paramLocalVarDecl.I.position);
-			if ((((ArrayType) paramLocalVarDecl.T).E.isEmptyExpr())
-					&& (!(paramLocalVarDecl.E instanceof VC.ASTs.InitExpr))) {
+						ast.I.spelling, ast.I.position);
+			if ((((ArrayType) ast.T).E.isEmptyExpr())
+					&& (!(ast.E instanceof InitExpr))) {
 				this.reporter.reportError(this.errMesg[18] + ": %",
-						paramLocalVarDecl.I.spelling,
-						paramLocalVarDecl.I.position);
+						ast.I.spelling, ast.I.position);
 			}
 		}
-		Object localObject = paramLocalVarDecl.E.visit(this,
-				paramLocalVarDecl.T);
+		Object eAST = ast.E.visit(this, ast.T);
 
-		if (paramLocalVarDecl.T.isArrayType()) {
-			if ((paramLocalVarDecl.E instanceof VC.ASTs.InitExpr)) {
-				Integer localInteger = (Integer) localObject;
-				ArrayType localArrayType = (ArrayType) paramLocalVarDecl.T;
-				if (localArrayType.E.isEmptyExpr()) {
-					localArrayType.E = new VC.ASTs.IntExpr(
-							new VC.ASTs.IntLiteral(localInteger.toString(),
-									dummyPos), dummyPos);
+		if (ast.T.isArrayType()) {
+			if ((ast.E instanceof InitExpr)) {
+				Integer localInteger = (Integer) eAST;
+				ArrayType tAST = (ArrayType) ast.T;
+				if (tAST.E.isEmptyExpr()) {
+					tAST.E = new IntExpr(new IntLiteral(
+							localInteger.toString(), dummyPos), dummyPos);
 				} else {
 					int i = Integer
-							.parseInt(((VC.ASTs.IntExpr) localArrayType.E).IL.spelling);
+							.parseInt(((IntExpr) tAST.E).IL.spelling);
 					int j = localInteger.intValue();
 					if (i < j)
 						this.reporter.reportError(this.errMesg[16] + ": %",
-								paramLocalVarDecl.I.spelling,
-								paramLocalVarDecl.position);
+								ast.I.spelling, ast.position);
 				}
-			} else if (!paramLocalVarDecl.E.isEmptyExpr()) {
+			} else if (!ast.E.isEmptyExpr()) {
 				this.reporter.reportError(this.errMesg[15] + ": %",
-						paramLocalVarDecl.I.spelling,
-						paramLocalVarDecl.position);
+						ast.I.spelling, ast.position);
 			}
 		} else {
-			paramLocalVarDecl.E = checkAssignment(paramLocalVarDecl.T,
-					paramLocalVarDecl.E, this.errMesg[6],
-					paramLocalVarDecl.position);
+			ast.E = checkAssignment(ast.T, ast.E, this.errMesg[6], ast.position);
 		}
 		return null;
 	}
 
-	public Object visitParaList(VC.ASTs.ParaList paramParaList,
-			Object paramObject) {
-		paramParaList.P.visit(this, null);
-		paramParaList.PL.visit(this, null);
+	public Object visitParaList(ParaList ast, Object o) {
+		ast.P.visit(this, null);
+		ast.PL.visit(this, null);
 		return null;
 	}
 
-	public Object visitParaDecl(VC.ASTs.ParaDecl paramParaDecl,
-			Object paramObject) {
-		declareVariable(paramParaDecl.I, paramParaDecl);
+	public Object visitParaDecl(ParaDecl ast, Object o) {
+		declareVariable(ast.I, ast);
 
-		if (paramParaDecl.T.isVoidType()) {
-			this.reporter.reportError(this.errMesg[3] + ": %",
-					paramParaDecl.I.spelling, paramParaDecl.I.position);
-		} else if ((paramParaDecl.T.isArrayType())
-				&& (((ArrayType) paramParaDecl.T).T.isVoidType())) {
-			this.reporter.reportError(this.errMesg[4] + ": %",
-					paramParaDecl.I.spelling, paramParaDecl.I.position);
+		if (ast.T.isVoidType()) {
+			this.reporter.reportError(this.errMesg[3] + ": %", ast.I.spelling,
+					ast.I.position);
+		} else if ((ast.T.isArrayType())
+				&& (((ArrayType) ast.T).T.isVoidType())) {
+			this.reporter.reportError(this.errMesg[4] + ": %", ast.I.spelling,
+					ast.I.position);
 		}
 		return null;
 	}
 
-	public Object visitEmptyParaList(VC.ASTs.EmptyParaList paramEmptyParaList,
-			Object paramObject) {
+	public Object visitEmptyParaList(EmptyParaList ast, Object o) {
 		return null;
 	}
 
-	public Object visitEmptyArgList(VC.ASTs.EmptyArgList paramEmptyArgList,
-			Object paramObject) {
-		VC.ASTs.List localList = (VC.ASTs.List) paramObject;
+	public Object visitEmptyArgList(EmptyArgList ast, Object o) {
+		List localList = (List) o;
 		if (!localList.isEmptyParaList())
-			this.reporter.reportError(this.errMesg[26], "",
-					paramEmptyArgList.position);
+			this.reporter.reportError(this.errMesg[26], "", ast.position);
 		return null;
 	}
 
-	public Object visitArgList(VC.ASTs.ArgList paramArgList, Object paramObject) {
-		VC.ASTs.List localList = (VC.ASTs.List) paramObject;
+	public Object visitArgList(ArgList ast, Object o) {
+		List localList = (List) o;
 
 		if (localList.isEmptyParaList()) {
-			this.reporter.reportError(this.errMesg[25], "",
-					paramArgList.position);
+			this.reporter.reportError(this.errMesg[25], "", ast.position);
 		} else {
-			paramArgList.A.visit(this, ((VC.ASTs.ParaList) localList).P);
-			paramArgList.AL.visit(this, ((VC.ASTs.ParaList) localList).PL);
+			ast.A.visit(this, ((ParaList) localList).P);
+			ast.AL.visit(this, ((ParaList) localList).PL);
 		}
 		return null;
 	}
 
-	public Object visitArg(VC.ASTs.Arg paramArg, Object paramObject) {
-		VC.ASTs.ParaDecl localParaDecl = (VC.ASTs.ParaDecl) paramObject;
-		Type localType1 = (Type) paramArg.E.visit(this, null);
+	public Object visitArg(Arg ast, Object o) {
+		ParaDecl localParaDecl = (ParaDecl) o;
+		Type localType1 = (Type) ast.E.visit(this, null);
 
 		int i = 0;
 
@@ -692,108 +619,95 @@ public final class Checker implements VC.ASTs.Visitor {
 
 		if (i != 0)
 			this.reporter.reportError(this.errMesg[27] + ": %",
-					localParaDecl.I.spelling, paramArg.E.position);
+					localParaDecl.I.spelling, ast.E.position);
 		if ((localParaDecl.T.equals(StdEnvironment.floatType))
 				&& (localType1.equals(StdEnvironment.intType))) {
-			paramArg.E = i2f(paramArg.E);
+			ast.E = i2f(ast.E);
 		}
 		return null;
 	}
 
-	public Object visitErrorType(VC.ASTs.ErrorType paramErrorType,
-			Object paramObject) {
+	public Object visitErrorType(ErrorType ast, Object o) {
 		return StdEnvironment.errorType;
 	}
 
-	public Object visitBooleanType(VC.ASTs.BooleanType paramBooleanType,
-			Object paramObject) {
+	public Object visitBooleanType(BooleanType ast, Object o) {
 		return StdEnvironment.booleanType;
 	}
 
-	public Object visitIntType(VC.ASTs.IntType paramIntType, Object paramObject) {
+	public Object visitIntType(IntType ast, Object o) {
 		return StdEnvironment.intType;
 	}
 
-	public Object visitFloatType(VC.ASTs.FloatType paramFloatType,
-			Object paramObject) {
+	public Object visitFloatType(FloatType ast, Object o) {
 		return StdEnvironment.floatType;
 	}
 
-	public Object visitStringType(VC.ASTs.StringType paramStringType,
-			Object paramObject) {
+	public Object visitStringType(StringType ast, Object o) {
 		return StdEnvironment.stringType;
 	}
 
-	public Object visitVoidType(VC.ASTs.VoidType paramVoidType,
-			Object paramObject) {
+	public Object visitVoidType(VoidType ast, Object o) {
 		return StdEnvironment.voidType;
 	}
 
-	public Object visitArrayType(ArrayType paramArrayType, Object paramObject) {
-		return paramArrayType;
+	public Object visitArrayType(ArrayType ast, Object o) {
+		return ast;
 	}
 
-	public Object visitIdent(Ident paramIdent, Object paramObject) {
-		VC.ASTs.Decl localDecl = this.idTable.retrieve(paramIdent.spelling);
+	public Object visitIdent(Ident ast, Object o) {
+		Decl localDecl = this.idTable.retrieve(ast.spelling);
 		if (localDecl != null)
-			paramIdent.decl = localDecl;
+			ast.decl = localDecl;
 		return localDecl;
 	}
 
-	public Object visitBooleanLiteral(
-			VC.ASTs.BooleanLiteral paramBooleanLiteral, Object paramObject) {
+	public Object visitBooleanLiteral(BooleanLiteral ast, Object o) {
 		return StdEnvironment.booleanType;
 	}
 
-	public Object visitIntLiteral(VC.ASTs.IntLiteral paramIntLiteral,
-			Object paramObject) {
+	public Object visitIntLiteral(IntLiteral ast, Object o) {
 		return StdEnvironment.intType;
 	}
 
-	public Object visitFloatLiteral(VC.ASTs.FloatLiteral paramFloatLiteral,
-			Object paramObject) {
+	public Object visitFloatLiteral(FloatLiteral ast, Object o) {
 		return StdEnvironment.floatType;
 	}
 
-	public Object visitStringLiteral(VC.ASTs.StringLiteral paramStringLiteral,
-			Object paramObject) {
+	public Object visitStringLiteral(StringLiteral ast, Object o) {
 		return StdEnvironment.stringType;
 	}
 
-	public Object visitOperator(VC.ASTs.Operator paramOperator,
-			Object paramObject) {
+	public Object visitOperator(Operator ast, Object o) {
 		return null;
 	}
 
-	public Object visitSimpleVar(VC.ASTs.SimpleVar paramSimpleVar,
-			Object paramObject) {
-		paramSimpleVar.type = StdEnvironment.errorType;
-		VC.ASTs.Decl localDecl = (VC.ASTs.Decl) paramSimpleVar.I.visit(this,
-				null);
+	public Object visitSimpleVar(SimpleVar ast, Object o) {
+		ast.type = StdEnvironment.errorType;
+		Decl localDecl = (Decl) ast.I.visit(this, null);
 		if (localDecl == null) {
-			this.reporter.reportError(this.errMesg[5] + ": %",
-					paramSimpleVar.I.spelling, paramSimpleVar.position);
+			this.reporter.reportError(this.errMesg[5] + ": %", ast.I.spelling,
+					ast.position);
 		} else if ((localDecl instanceof FuncDecl)) {
-			this.reporter.reportError(this.errMesg[11] + ": %",
-					paramSimpleVar.I.spelling, paramSimpleVar.I.position);
+			this.reporter.reportError(this.errMesg[11] + ": %", ast.I.spelling,
+					ast.I.position);
 		} else {
-			paramSimpleVar.type = localDecl.T;
+			ast.type = localDecl.T;
 		}
 
-		if ((paramSimpleVar.type.isArrayType())
-				&& ((paramSimpleVar.parent instanceof VC.ASTs.VarExpr))
-				&& (!(paramSimpleVar.parent.parent instanceof VC.ASTs.Arg))) {
-			this.reporter.reportError(this.errMesg[11] + ": %",
-					paramSimpleVar.I.spelling, paramSimpleVar.I.position);
+		if ((ast.type.isArrayType()) && ((ast.parent instanceof VarExpr))
+				&& (!(ast.parent.parent instanceof Arg))) {
+			this.reporter.reportError(this.errMesg[11] + ": %", ast.I.spelling,
+					ast.I.position);
 		}
 
-		return paramSimpleVar.type;
+		return ast.type;
 	}
 
 	private FuncDecl declareStdFunc(Type paramType, String paramString,
-			VC.ASTs.List paramList) {
+			List paramList) {
 		FuncDecl localFuncDecl = new FuncDecl(paramType, new Ident(paramString,
-				dummyPos), paramList, new VC.ASTs.EmptyStmt(dummyPos), dummyPos);
+				dummyPos), paramList, new EmptyStmt(dummyPos), dummyPos);
 
 		this.idTable.insert(paramString, localFuncDecl);
 		return localFuncDecl;
@@ -802,66 +716,61 @@ public final class Checker implements VC.ASTs.Visitor {
 	private static final Ident dummyI = new Ident("x", dummyPos);
 
 	private void establishStdEnvironment() {
-		StdEnvironment.booleanType = new VC.ASTs.BooleanType(dummyPos);
-		StdEnvironment.intType = new VC.ASTs.IntType(dummyPos);
-		StdEnvironment.floatType = new VC.ASTs.FloatType(dummyPos);
-		StdEnvironment.stringType = new VC.ASTs.StringType(dummyPos);
-		StdEnvironment.voidType = new VC.ASTs.VoidType(dummyPos);
-		StdEnvironment.errorType = new VC.ASTs.ErrorType(dummyPos);
+		StdEnvironment.booleanType = new BooleanType(dummyPos);
+		StdEnvironment.intType = new IntType(dummyPos);
+		StdEnvironment.floatType = new FloatType(dummyPos);
+		StdEnvironment.stringType = new StringType(dummyPos);
+		StdEnvironment.voidType = new VoidType(dummyPos);
+		StdEnvironment.errorType = new ErrorType(dummyPos);
 
 		StdEnvironment.getIntDecl = declareStdFunc(StdEnvironment.intType,
-				"getInt", new VC.ASTs.EmptyParaList(dummyPos));
+				"getInt", new EmptyParaList(dummyPos));
 
 		StdEnvironment.putIntDecl = declareStdFunc(StdEnvironment.voidType,
-				"putInt", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
-						StdEnvironment.intType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+				"putInt", new ParaList(new ParaDecl(StdEnvironment.intType,
+						dummyI, dummyPos), new EmptyParaList(dummyPos),
+						dummyPos));
 
 		StdEnvironment.putIntLnDecl = declareStdFunc(StdEnvironment.voidType,
-				"putIntLn", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
-						StdEnvironment.intType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+				"putIntLn", new ParaList(new ParaDecl(StdEnvironment.intType,
+						dummyI, dummyPos), new EmptyParaList(dummyPos),
+						dummyPos));
 
 		StdEnvironment.getFloatDecl = declareStdFunc(StdEnvironment.floatType,
-				"getFloat", new VC.ASTs.EmptyParaList(dummyPos));
+				"getFloat", new EmptyParaList(dummyPos));
 
 		StdEnvironment.putFloatDecl = declareStdFunc(StdEnvironment.voidType,
-				"putFloat", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
-						StdEnvironment.floatType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+				"putFloat", new ParaList(new ParaDecl(StdEnvironment.floatType,
+						dummyI, dummyPos), new EmptyParaList(dummyPos),
+						dummyPos));
 
 		StdEnvironment.putFloatLnDecl = declareStdFunc(StdEnvironment.voidType,
-				"putFloatLn", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
+				"putFloatLn", new ParaList(new ParaDecl(
 						StdEnvironment.floatType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+						new EmptyParaList(dummyPos), dummyPos));
 
 		StdEnvironment.putBoolDecl = declareStdFunc(StdEnvironment.voidType,
-				"putBool", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
+				"putBool", new ParaList(new ParaDecl(
 						StdEnvironment.booleanType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+						new EmptyParaList(dummyPos), dummyPos));
 
 		StdEnvironment.putBoolLnDecl = declareStdFunc(StdEnvironment.voidType,
-				"putBoolLn", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
+				"putBoolLn", new ParaList(new ParaDecl(
 						StdEnvironment.booleanType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+						new EmptyParaList(dummyPos), dummyPos));
 
 		StdEnvironment.putStringLnDecl = declareStdFunc(
-				StdEnvironment.voidType, "putStringLn", new VC.ASTs.ParaList(
-						new VC.ASTs.ParaDecl(StdEnvironment.stringType, dummyI,
-								dummyPos), new VC.ASTs.EmptyParaList(dummyPos),
+				StdEnvironment.voidType, "putStringLn", new ParaList(
+						new ParaDecl(StdEnvironment.stringType, dummyI,
+								dummyPos), new EmptyParaList(dummyPos),
 						dummyPos));
 
 		StdEnvironment.putStringDecl = declareStdFunc(StdEnvironment.voidType,
-				"putString", new VC.ASTs.ParaList(new VC.ASTs.ParaDecl(
+				"putString", new ParaList(new ParaDecl(
 						StdEnvironment.stringType, dummyI, dummyPos),
-						new VC.ASTs.EmptyParaList(dummyPos), dummyPos));
+						new EmptyParaList(dummyPos), dummyPos));
 
 		StdEnvironment.putLnDecl = declareStdFunc(StdEnvironment.voidType,
-				"putLn", new VC.ASTs.EmptyParaList(dummyPos));
+				"putLn", new EmptyParaList(dummyPos));
 	}
 }
-
-/*
- * Location: /home/andrew/study/git/vc/Sols Qualified Name: VC.Checker.Checker
- * Java Class Version: 6 (50.0) JD-Core Version: 0.7.0.1
- */
