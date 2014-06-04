@@ -62,7 +62,6 @@ public final class JVM {
             // JVM operation codes
 
             // Arithmetic Instructions
-
             FADD = "fadd",
             IADD = "iadd",
             FSUB = "fsub",
@@ -98,6 +97,7 @@ public final class JVM {
             FLOAD_1 = "fload_1",
             FLOAD_2 = "fload_2",
             FLOAD_3 = "fload_3",
+
             // store the operand stack into a local variable
             ASTORE = "astore",
             ASTORE_0 = "astore_0",
