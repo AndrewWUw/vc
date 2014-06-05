@@ -84,23 +84,54 @@ public final class Emitter implements Visitor {
         // create a Frame for <clinit>
 
         Frame frame = new Frame(false);
-
         list = ast.FL;
         while (!list.isEmpty()) {
             DeclList dlAST = (DeclList) list;
             if (dlAST.D instanceof GlobalVarDecl) {
                 GlobalVarDecl vAST = (GlobalVarDecl) dlAST.D;
-                if (!vAST.E.isEmptyExpr()) {
-                    vAST.E.visit(this, frame);
-                } else {
-                    if (vAST.T.equals(StdEnvironment.floatType))
-                        emit(JVM.FCONST_0);
-                    else
-                        emit(JVM.ICONST_0);
-                    frame.push();
+                if (!vAST.T.isArrayType()) {
+                    if (!vAST.E.isEmptyExpr()) {
+                        vAST.E.visit(this, frame);
+                    } else {
+                        if (vAST.T.equals(StdEnvironment.floatType))
+                            emit(JVM.FCONST_0);
+                        else
+                            emit(JVM.ICONST_0);
+                        frame.push();
+                    }
+
+                    emitPUTSTATIC(VCtoJavaType(vAST.T), vAST.I.spelling);
+                    frame.pop();
                 }
-                emitPUTSTATIC(VCtoJavaType(vAST.T), vAST.I.spelling);
-                frame.pop();
+            }else if (ast.T.isArrayType()) {
+                ArrayType tAST = (ArrayType) ast.T;
+                String T = VCtoJavaType(tAST.T);
+
+                emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " [" + T
+                        + " from " + (String) frame.scopeStart.peek() + " to "
+                        + (String) frame.scopeEnd.peek());
+
+                if (!ast.E.isEmptyExpr()) {
+                    tAST.E.visit(this, o);
+                    emit(JVM.NEWARRAY + T);
+
+                    ExprList elAST = (ExprList) ((InitExpr) ast.E).IL;
+                    while (!elAST.isEmptyExprList()) {
+                        emit(JVM.DUP);
+                        elAST.E.visit(this, o);
+                        if (tAST.T.equals(StdEnvironment.floatType)) {
+                            emit(JVM.FASTORE);
+                        } else if (ast.T.equals(StdEnvironment.intType)) {
+                            emit(JVM.IASTORE);
+                        }
+                        elAST = (ExprList) elAST.EL;
+                    }
+
+                    if (ast.index >= 0 && ast.index <= 3)
+                        emit(JVM.ASTORE + "_" + ast.index);
+                    else
+                        emit(JVM.ASTORE, ast.index);
+                }
             }
             list = dlAST.DL;
         }
@@ -469,16 +500,28 @@ public final class Emitter implements Visitor {
                     + " from " + (String) frame.scopeStart.peek() + " to "
                     + (String) frame.scopeEnd.peek());
 
-            int size = Integer.parseInt(((IntExpr) tAST.E).IL.spelling);
+            if (!ast.E.isEmptyExpr()) {
+                tAST.E.visit(this, o);
+                emit(JVM.NEWARRAY + T);
+                int pos = 0;
+                
+                ExprList elAST = (ExprList) ((InitExpr) ast.E).IL;
+                while (!elAST.isEmptyExprList()) {
+                    emit(JVM.DUP);
+                    emit(JVM.ICONST );
+                    elAST.E.visit(this, o);
+                    if (tAST.T.equals(StdEnvironment.floatType)) {
+                        emit(JVM.FASTORE);
+                    } else if (ast.T.equals(StdEnvironment.intType)) {
+                        emit(JVM.IASTORE);
+                    }
+                    elAST = (ExprList) elAST.EL;
+                }
 
-            if (((ArrayType) ast.T).T.isBooleanType()) {
-
-            } else if (((ArrayType) ast.T).T.isIntType()) {
-
-            } else if (((ArrayType) ast.T).T.isFloatType()) {
-
-            } else if (((ArrayType) ast.T).T.isStringType()) {
-
+                if (ast.index >= 0 && ast.index <= 3)
+                    emit(JVM.ASTORE + "_" + ast.index);
+                else
+                    emit(JVM.ASTORE, ast.index);
             }
         }
 
@@ -804,7 +847,6 @@ public final class Emitter implements Visitor {
     @Override
     public Object visitWhileStmt(WhileStmt ast, Object o) {
         // TODO Auto-generated method stub
-
         Frame frame = (Frame) o;
         String contString = frame.getNewLabel();
         String breaksString = frame.getNewLabel();
@@ -832,15 +874,16 @@ public final class Emitter implements Visitor {
 
     @Override
     public Object visitBreakStmt(BreakStmt ast, Object o) {
-        String str = (String) o;
-        emit(JVM.GOTO + str);
+        // String str = (String) o;
+        Frame frame = (Frame) o;
+        emit(JVM.GOTO + frame.brkStack.peek());
         return null;
     }
 
     @Override
     public Object visitContinueStmt(ContinueStmt ast, Object o) {
-        String str = (String) o;
-        emit(JVM.GOTO + str);
+        Frame frame = (Frame) o;
+        emit(JVM.GOTO + frame.conStack.peek());
         return null;
     }
 
@@ -849,10 +892,8 @@ public final class Emitter implements Visitor {
         Frame frame = (Frame) o;
         ast.E.visit(this, o);
         // TODO Auto-generated method stub
-        if (!frame.scopeStart.isEmpty())
-            frame.scopeStart.pop();
-        if (!frame.scopeEnd.isEmpty())
-            frame.scopeEnd.pop();
+        if (!(ast.E instanceof AssignExpr || ast.E.isEmptyExpr()))
+            frame.pop();
 
         return null;
     }
