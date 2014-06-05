@@ -464,12 +464,11 @@ public final class Emitter implements Visitor {
         } else if (ast.T.isArrayType()) {
             ArrayType tAST = (ArrayType) ast.T;
             String T = VCtoJavaType(tAST.T);
-            
-            emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " " + T
+
+            emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " [" + T
                     + " from " + (String) frame.scopeStart.peek() + " to "
                     + (String) frame.scopeEnd.peek());
 
-            
             int size = Integer.parseInt(((IntExpr) tAST.E).IL.spelling);
 
             if (((ArrayType) ast.T).T.isBooleanType()) {
@@ -1005,8 +1004,8 @@ public final class Emitter implements Visitor {
             // }
         }
 
-//        ast.E2 = checkAssignment(ast.E1.type, ast.E2, this.errMesg[6],
-//                ast.position);
+        // ast.E2 = checkAssignment(ast.E1.type, ast.E2, this.errMesg[6],
+        // ast.position);
 
         ast.type = ast.E2.type;
 
