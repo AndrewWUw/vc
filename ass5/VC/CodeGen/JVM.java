@@ -65,6 +65,7 @@ public final class JVM {
             NEWARRAY = "newarray",
             IASTORE = "iastore",
             FASTORE = "fastore",
+            BASTORE = "bastore",
 
             // Arithmetic Instructions
             FADD = "fadd",
