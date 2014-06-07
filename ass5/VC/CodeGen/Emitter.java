@@ -136,8 +136,11 @@ public final class Emitter implements Visitor {
                             elAST.E.visit(this, o);
                             if (tAST.T.equals(StdEnvironment.floatType)) {
                                 emit(JVM.FASTORE);
-                            } else {
+                            } else if (tAST.T.equals(StdEnvironment.intType)) {
                                 emit(JVM.IASTORE);
+                            } else if (tAST.T
+                                    .equals(StdEnvironment.booleanType)) {
+                                emit(JVM.BASTORE);
                             }
                             ++pos;
                             elAST = (ExprList) elAST.EL;
@@ -528,6 +531,8 @@ public final class Emitter implements Visitor {
                         emit(JVM.FASTORE);
                     } else if (ast.T.equals(StdEnvironment.intType)) {
                         emit(JVM.IASTORE);
+                    } else if (ast.T.equals(StdEnvironment.booleanType)) {
+                        emit(JVM.BASTORE);
                     }
                     ++pos;
                     elAST = (ExprList) elAST.EL;
@@ -918,34 +923,29 @@ public final class Emitter implements Visitor {
     @Override
     public Object visitUnaryExpr(UnaryExpr ast, Object o) {
         // TODO Auto-generated method stub
+        Frame frame = (Frame) o;
         Type localType = (Type) ast.E.visit(this, o);
-        String str = ast.O.spelling;
-        int i = 0;
 
-        if (localType.isErrorType()) {
-            localType = StdEnvironment.errorType;
-        } else if ((localType.isVoidType()) || (localType.isStringType())
-                || (localType.isArrayType())) {
+        if (localType.isFloatType()) {
+            emitFCONST(1);
+            emit(JVM.FADD);
+            // emitFSTORE(frame.)
+        } else if (localType.isIntType()) {
+            emitICONST(1);
+            emit(JVM.IADD);
+            // emitISTORE(ast)
+        } else if (localType.isBooleanType()) {
+            // TODO
+            String l1 = frame.getNewLabel();
+            String l2 = frame.getNewLabel();
 
-            i = 1;
-        } else if (((str.equals("!")) && (!localType.isBooleanType()))
-                || ((!str.equals("!")) && (localType.isBooleanType()))) {
-
-            i = 1;
+            ast.E.visit(this, o);
+            emit(JVM.IFEQ, l1);
+            emit(l1 + ":");
+            emit(JVM.ICONST_0);
+            emit(l2 + ":");
+            emit(JVM.ICONST_1);
         }
-
-        if (i != 0) {
-//            this.reporter.reportError(this.errMesg[10] + ": %", str,
-//                    ast.position);
-            localType = StdEnvironment.errorType;
-        } else if (localType.isFloatType()) {
-            ast.O.spelling = ("f" + ast.O.spelling);
-        } else {
-            ast.O.spelling = ("i" + ast.O.spelling);
-        }
-
-        ast.type = localType;
-        return ast.type;
 
         return null;
     }
@@ -964,107 +964,208 @@ public final class Emitter implements Visitor {
         // TODO Auto-generated method stub
         Frame frame = (Frame) o;
         String op = ast.O.spelling;
+        String l1 = frame.getNewLabel();
+        String l2 = frame.getNewLabel();
 
-        ast.E1.visit(this, o);
-        ast.E2.visit(this, o);
+        if (op.contains("i")) {
+            ast.E1.visit(this, o);
+            ast.E2.visit(this, o);
 
-        if (op.equals("")) {
-
-        } else if (op.equals("i+")) {
-            emit(JVM.IADD);
-        } else if (op.equals("i-")) {
-            emit(JVM.ISUB);
-        } else if (op.equals("f+")) {
-            emit(JVM.FADD);
-        } else if (op.equals("f-")) {
-            emit(JVM.FSUB);
-        }
-
-        Type tAST1 = (Type) ast.E1.visit(this, o);
-        Type tAST2 = (Type) ast.E2.visit(this, o);
-        Type tAST3 = tAST1;
-
-        int i = 0;
-        int j = (op.equals("&&")) || (op.equals("||")) ? 1 : 0;
-        int k = (op.equals("==")) || (op.equals("!=")) ? 1 : 0;
-        int m = (op.equals("<=")) || (op.equals(">=")) || (op.equals("<"))
-                || (op.equals(">")) ? 1 : 0;
-
-        if ((tAST1.isErrorType()) || (tAST2.isErrorType())) {
-            tAST3 = StdEnvironment.errorType;
-        } else if ((tAST1.isVoidType()) || (tAST2.isVoidType())) {
-            i = 1;
-        } else if ((tAST1.isStringType()) || (tAST2.isStringType())) {
-            i = 1;
-        } else if ((tAST1.isArrayType()) || (tAST2.isArrayType())) {
-            i = 1;
-        } else if ((tAST1.isBooleanType()) || (tAST2.isBooleanType())) {
-            if ((!tAST1.equals(tAST2)) || ((j == 0) && (k == 0)))
-                i = 1;
-            ast.O.spelling = ("i" + ast.O.spelling);
-        } else if (j != 0) {
-            i = 1;
-        } else if (!tAST1.equals(tAST2)) {
-            tAST3 = StdEnvironment.floatType;
-            ast.O.spelling = ("f" + ast.O.spelling);
-            if (!tAST3.equals(tAST1)) {
-                ast.E1 = i2f(ast.E1);
+            if (op.equals("i+")) {
+                emit(JVM.IADD);
+            } else if (op.equals("i-")) {
+                emit(JVM.ISUB);
+            } else if (op.equals("i*")) {
+                emit(JVM.IMUL);
+            } else if (op.equals("i/")) {
+                emit(JVM.IDIV);
             } else {
-                ast.E2 = i2f(ast.E2);
+                emitRelationalExpr(true, op, l1, l2);
             }
-        } else if (tAST1.isFloatType()) {
-            ast.O.spelling = ("f" + ast.O.spelling);
-        } else {
-            ast.O.spelling = ("i" + ast.O.spelling);
+        } else if (op.contains("f")) {
+            Type tAST1 = (Type) ast.E1.visit(this, o);
+            if (tAST1.isIntType())
+                emit(JVM.I2F);
+            Type tAST2 = (Type) ast.E2.visit(this, o);
+            if (tAST2.isIntType())
+                emit(JVM.I2F);
+
+            if (op.equals("f+")) {
+                emit(JVM.FADD);
+            } else if (op.equals("f-")) {
+                emit(JVM.FSUB);
+            } else if (op.equals("f*")) {
+                emit(JVM.FMUL);
+            } else if (op.equals("f/")) {
+                emit(JVM.FDIV);
+            } else {
+                emitRelationalExpr(false, op, l1, l2);
+            }
+        } else if (op.equals("i&&")) {
+            ast.E1.visit(this, o);
+            emit(JVM.IFEQ, l1);
+            ast.E2.visit(this, o);
+            emit(JVM.IFEQ, l1);
+            emit(JVM.ICONST_1);
+            emit(JVM.GOTO, l2);
+            emit(l1 + ":");
+            emit(JVM.ICONST_0);
+            emit(l2 + ":");
+
+        } else if (op.equals("i||")) {
+            ast.E1.visit(this, o);
+            emit(JVM.IFEQ, l1);
+            ast.E2.visit(this, o);
+            emit(JVM.IFEQ, l1);
+            emit(JVM.ICONST_0);
+            emit(JVM.GOTO, l2);
+            emit(l1 + ":");
+            emit(JVM.ICONST_1);
+            emit(l2 + ":");
+
+        } else if (op.equals("i!=")) {
+            ast.E1.visit(this, o);
+            ast.E2.visit(this, o);
+            emit(JVM.IFNE, l1);
+            emit(JVM.ICONST_0);
+            emit(JVM.GOTO, l2);
+            emit(l1 + ":");
+            emitICONST(1);
+            emit(l2 + ":");
+
+        } else if (op.equals("i==")) {
+            ast.E1.visit(this, o);
+            ast.E2.visit(this, o);
+            emit(JVM.IFEQ, l1);
+            emitICONST(0);
+            emit(JVM.GOTO, l2);
+            emit(l1 + ":");
+            emitICONST(1);
+            emit(l2 + ":");
+
         }
-
-        if (i != 0) {
-            // this.reporter.reportError(this.errMesg[9] + ": %", str,
-            // ast.position);
-            tAST3 = StdEnvironment.errorType;
-        }
-
-        ast.type = ((k != 0) || (m != 0) ? StdEnvironment.booleanType : tAST3);
-        // return paramBinaryExpr.type;
-
         return null;
+    }
+
+    private void emitRelationalExpr(boolean isInt, String op, String l1,
+            String l2) {
+        if (isInt) {
+            if (op.equals("i>")) {
+                emit(JVM.IF_ICMPGT, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            } else if (op.equals("i>=")) {
+                emit(JVM.IF_ICMPGE, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            } else if (op.equals("i<")) {
+                emit(JVM.IF_ICMPLT, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            } else if (op.equals("i<=")) {
+                emit(JVM.IF_ICMPLE, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            }
+        } else {
+            if (op.equals("f>")) {
+                emit(JVM.FCMPG);
+                emit(JVM.IFGT, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            } else if (op.equals("f>=")) {
+                emit(JVM.FCMPG);
+                emit(JVM.IFGE, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            } else if (op.equals("f<")) {
+                emit(JVM.FCMPG);
+                emit(JVM.IFLT, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            } else if (op.equals("f<=")) {
+                emit(JVM.FCMPG);
+                emit(JVM.IFLE, l1);
+                emitICONST(0);
+                emit(JVM.GOTO);
+                emit(l1 + ":");
+                emitICONST(1);
+                emit(l2 + ":");
+            }
+        }
     }
 
     @Override
     public Object visitInitExpr(InitExpr ast, Object o) {
         // TODO Auto-generated method stub
-        return null;
+        return ast.IL.visit(this, o);
     }
 
     @Override
     public Object visitExprList(ExprList ast, Object o) {
         // TODO Auto-generated method stub
-        return null;
+        ast.E.visit(this, o);
+        if (ast.EL instanceof ExprList) {
+            ((ExprList) ast.EL).index = (ast.index + 1);
+            return ast.EL.visit(this, o);
+
+        }
+        return new Integer(ast.index + 1);
     }
 
     @Override
     public Object visitArrayExpr(ArrayExpr ast, Object o) {
         // TODO Auto-generated method stub
-        return null;
+        Frame frame = (Frame) o;
+        Type tAST1 = (Type) ast.V.visit(this, o);
+
+        if (tAST1.isArrayType()) {
+            tAST1 = ((ArrayType) tAST1).T;
+        }
+
+        Type tAST2 = (Type) ast.E.visit(this, o);
+        ast.type = tAST1;
+        return tAST1;
     }
 
     @Override
     public Object visitVarExpr(VarExpr ast, Object o) {
         // TODO Auto-generated method stub
-        return null;
+        ast.type = ((Type) ast.V.visit(this, null));
+        return ast.type;
     }
 
     @Override
     public Object visitAssignExpr(AssignExpr ast, Object o) {
         // TODO Auto-generated method stub
-
         Type tAST = (Type) ast.E1.visit(this, o);
 
         if (tAST.isArrayType()) {
 
         } else {
             if (tAST.isFloatType()) {
-
+                
             } else if (tAST.isIntType()) {
 
             } else if (tAST.isBooleanType()) {
