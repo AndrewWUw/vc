@@ -1,14 +1,18 @@
 .class public array1
 .super java/lang/Object
 	
+.field static i1 V
 	
 	; standard class static initializer 
 .method static <clinit>()V
 	
+	iconst_1
+	newarray int
+	putstatic array1/i1 [I
 	
 	; set limits used by this method
 .limit locals 0
-.limit stack 0
+.limit stack 1
 	return
 .end method
 	
@@ -52,11 +56,45 @@ L0:
 	dup
 	invokenonvirtual array1/<init>()V
 	astore_1
+.var 2 is i2 [I from L0 to L1
+	iconst_2
+	newarray int
+	astore_2
+.var 3 is f1 [F from L0 to L1
+	iconst_2
+	newarray float
+	astore_3
+	getstatic array1/i1 [I
+	iconst_0
+	iaload
+	aload_2
+	iconst_1
+	iaload
+	getstatic array1/i1 [I
+	iconst_0
+	aload_2
+	iconst_0
+	aload_2
+	iconst_1
+	iaload
+	dup_x2
+	iastore
+	iastore
+	pop
+	aload_1
+	aload_2
+	aload_3
+	invokevirtual array1/foo([I[F)V
+	aload_1
+	aload_2
+	aload_3
+	invokevirtual array1/foo2([I[F)I
+	pop
 	return
 L1:
 	return
 	
 	; set limits used by this method
-.limit locals 2
-.limit stack 2
+.limit locals 4
+.limit stack 12
 .end method

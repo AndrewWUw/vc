@@ -111,7 +111,7 @@ public final class Emitter implements Visitor {
                     String T = VCtoJavaType(tAST.T);
 
                     if (!vAST.E.isEmptyExpr()) {
-                        tAST.E.visit(this, frame);
+                        vAST.E.visit(this, frame);
                         emit(JVM.NEWARRAY, tAST.T.toString());
                         emitPUTSTATICARRAY(T, vAST.I.spelling);
 
@@ -863,28 +863,38 @@ public final class Emitter implements Visitor {
                     + (String) frame.scopeEnd.peek());
 
             if (!ast.E.isEmptyExpr()) {
-                tAST.E.visit(this, o);
-                emit(JVM.NEWARRAY + T);
-                int pos = 0;
+                ast.E.visit(this, o);
+                emit(JVM.NEWARRAY + tAST.T.toString());
+                emitASTORE(ast.I);
+            }else{
+//                if (tAST.T.equals(StdEnvironment.floatType))
+//                    emit(JVM.FCONST_0);
+//                else
+//                    emit(JVM.ICONST_0);
 
-                ExprList elAST = (ExprList) ((InitExpr) ast.E).IL;
-                while (!elAST.isEmptyExprList()) {
-                    emit(JVM.DUP);
-                    if (pos >= 0 && pos <= 5) {
-                        emit(JVM.ICONST + "_" + pos);
-                    } else
-                        emit(JVM.ICONST, pos);
-                    elAST.E.visit(this, o);
-                    if (tAST.T.equals(StdEnvironment.floatType)) {
-                        emit(JVM.FASTORE);
-                    } else if (ast.T.equals(StdEnvironment.intType)) {
-                        emit(JVM.IASTORE);
-                    } else if (ast.T.equals(StdEnvironment.booleanType)) {
-                        emit(JVM.BASTORE);
-                    }
-                    ++pos;
-                    elAST = (ExprList) elAST.EL;
-                }
+                tAST.E.visit(this, frame);
+                emit(JVM.NEWARRAY, tAST.T.toString());
+
+                int pos = 0;
+                
+//                ExprList elAST = (ExprList) ((InitExpr) ast.E).IL;
+//                while (!elAST.isEmptyExprList()) {
+//                    emit(JVM.DUP);
+//                    if (pos >= 0 && pos <= 5) {
+//                        emit(JVM.ICONST + "_" + pos);
+//                    } else
+//                        emit(JVM.ICONST, pos);
+//                    elAST.E.visit(this, o);
+//                    if (tAST.T.equals(StdEnvironment.floatType)) {
+//                        emit(JVM.FASTORE);
+//                    } else if (ast.T.equals(StdEnvironment.intType)) {
+//                        emit(JVM.IASTORE);
+//                    } else if (ast.T.equals(StdEnvironment.booleanType)) {
+//                        emit(JVM.BASTORE);
+//                    }
+//                    ++pos;
+//                    elAST = (ExprList) elAST.EL;
+//                }
 
                 if (ast.index >= 0 && ast.index <= 3)
                     emit(JVM.ASTORE + "_" + ast.index);
