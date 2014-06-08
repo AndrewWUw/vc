@@ -101,6 +101,7 @@ public final class Emitter implements Visitor {
                             emit(JVM.ICONST_0);
                         frame.push();
                     }
+                    emitPUTSTATIC(VCtoJavaType(vAST.T), vAST.I.spelling);
                     frame.pop();
 
                 } else if (vAST.T.isArrayType()) {
@@ -134,10 +135,11 @@ public final class Emitter implements Visitor {
                             else
                                 break;
                         }
-
+                        frame.push();
                         // vAST.E.visit(this, frame);
                     }
                     emitPUTSTATICARRAY(T, vAST.I.spelling);
+                    frame.pop();
                 }
             }
 
@@ -304,7 +306,7 @@ public final class Emitter implements Visitor {
     public Object visitExprStmt(ExprStmt ast, Object o) {
         Frame frame = (Frame) o;
         ast.E.visit(this, o);
-        if (ast.E instanceof AssignExpr || ast.E.isEmptyExpr()
+        if (!(ast.E instanceof AssignExpr) || ast.E.isEmptyExpr()
                 || ((ast.E instanceof CallExpr) && !ast.E.type.isVoidType())) {
             frame.pop();
             emit(JVM.POP);
@@ -850,7 +852,7 @@ public final class Emitter implements Visitor {
             emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " [" + T
                     + " from " + (String) frame.scopeStart.peek() + " to "
                     + (String) frame.scopeEnd.peek());
-          
+
             tAST.E.visit(this, frame);
             emit(JVM.NEWARRAY, tAST.T.toString());
 
@@ -864,14 +866,14 @@ public final class Emitter implements Visitor {
                         emit(JVM.ICONST + "_" + pos);
                     } else
                         emit(JVM.ICONST, pos);
-                    
+
                     elAST.E.visit(this, o);
-                    
+
                     if (tAST.T.equals(StdEnvironment.floatType)) {
                         emit(JVM.FASTORE);
-                    } else  {
+                    } else {
                         emit(JVM.IASTORE);
-                    } 
+                    }
                     ++pos;
                     if (!elAST.EL.isEmptyExprList())
                         elAST = (ExprList) elAST.EL;
@@ -1011,22 +1013,30 @@ public final class Emitter implements Visitor {
                 dAST = (ParaDecl) dAST;
             }
 
-            if (!(ast.parent instanceof ArrayExpr)) {
-                if (dAST.T.isArrayType()) {
-                    emitALOAD(dAST.index);
-                } else {
-                    if (dAST.T.equals(StdEnvironment.floatType)) {
-                        emitFLOAD(dAST.index);
+            if (!(ast.parent.parent instanceof AssignExpr)
+                    || ast.parent.equals(((AssignExpr) (ast.parent.parent)).E2)) {
+                if (!(ast.parent instanceof ArrayExpr)) {
+                    if (dAST.T.isArrayType()) {
+                        emitALOAD(dAST.index);
                     } else {
-                        emitILOAD(dAST.index);
+                        if (dAST.T.equals(StdEnvironment.floatType)) {
+                            emitFLOAD(dAST.index);
+                        } else {
+                            emitILOAD(dAST.index);
+                        }
                     }
+                } else {
+                    emitALOAD(dAST.index);
                 }
-            } else {
-                emitALOAD(dAST.index);
+            } else if (ast.parent.equals(((AssignExpr) (ast.parent.parent)).E2)) {
+
             }
+
         } else if (dAST instanceof GlobalVarDecl) {
             dAST = (GlobalVarDecl) dAST;
             String str = null;
+            // if (!(ast.parent.parent instanceof AssignExpr)) {
+
             if (!(ast.parent instanceof ArrayExpr)) {
                 if (dAST.T.isArrayType()) {
                     str = "[" + VCtoJavaType(((ArrayType) dAST.T).T);

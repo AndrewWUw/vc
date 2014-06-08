@@ -82,10 +82,11 @@ L0:
 	getstatic gcd/j I
 	invokevirtual gcd/gcd(II)I
 	invokestatic VC/lang/System/putIntLn(I)V
+	pop
 L1:
 	return
 	
 	; set limits used by this method
 .limit locals 2
-.limit stack 5
+.limit stack 7
 .end method

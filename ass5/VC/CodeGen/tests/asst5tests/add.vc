@@ -1,6 +1,6 @@
 int main() {
     int a,b,c;
-//    putStringLn("Enter two numbers to add");
+    putStringLn("Enter two numbers to add");
     a = getInt();
     b = getInt();
     c = a + b;
