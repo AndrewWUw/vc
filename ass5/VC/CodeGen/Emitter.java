@@ -92,7 +92,6 @@ public final class Emitter implements Visitor {
                 GlobalVarDecl vAST = (GlobalVarDecl) dlAST.D;
 
                 if (!vAST.T.isArrayType()) {
-
                     if (!vAST.E.isEmptyExpr()) {
                         vAST.E.visit(this, frame);
                     } else {
@@ -102,53 +101,43 @@ public final class Emitter implements Visitor {
                             emit(JVM.ICONST_0);
                         frame.push();
                     }
-                    emitPUTSTATIC(VCtoJavaType(vAST.T), vAST.I.spelling);
-
                     frame.pop();
 
                 } else if (vAST.T.isArrayType()) {
                     ArrayType tAST = (ArrayType) vAST.T;
                     String T = VCtoJavaType(tAST.T);
 
+                    tAST.E.visit(this, frame);
+                    emit(JVM.NEWARRAY, tAST.T.toString());
+
                     if (!vAST.E.isEmptyExpr()) {
-                        vAST.E.visit(this, frame);
-                        emit(JVM.NEWARRAY, tAST.T.toString());
-                        emitPUTSTATICARRAY(T, vAST.I.spelling);
-
-                    } else {
-                        if (tAST.T.equals(StdEnvironment.floatType))
-                            emit(JVM.FCONST_0);
-                        else
-                            emit(JVM.ICONST_0);
-
-                        tAST.E.visit(this, frame);
-                        emit(JVM.NEWARRAY, tAST.T.toString());
-
                         int pos = 0;
-                        //
-                        //
-                        // ExprList elAST = (ExprList) ((InitExpr) tAST.E).IL;
-                        //
-                        // while (!elAST.isEmptyExprList()) {
-                        // emit(JVM.DUP);
-                        // if (pos >= 0 && pos <= 5) {
-                        // emit(JVM.ICONST + "_" + pos);
-                        // } else
-                        // emit(JVM.ICONST, pos);
-                        // elAST.E.visit(this, o);
-                        // if (tAST.T.equals(StdEnvironment.floatType)) {
-                        // emit(JVM.FASTORE);
-                        // } else if (tAST.T.equals(StdEnvironment.intType)) {
-                        // emit(JVM.IASTORE);
-                        // } else if (tAST.T
-                        // .equals(StdEnvironment.booleanType)) {
-                        // emit(JVM.BASTORE);
-                        // }
-                        // ++pos;
-                        // elAST = (ExprList) elAST.EL;
-                        // }
-                        emitPUTSTATICARRAY(T, vAST.I.spelling);
+                        ExprList elAST = (ExprList) ((InitExpr) vAST.E).IL;
+
+                        while (!elAST.isEmptyExprList()) {
+                            emit(JVM.DUP);
+                            if (pos >= 0 && pos <= 5) {
+                                emit(JVM.ICONST + "_" + pos);
+                            } else
+                                emit(JVM.ICONST, pos);
+
+                            elAST.E.visit(this, frame);
+
+                            if (tAST.T.equals(StdEnvironment.floatType)) {
+                                emit(JVM.FASTORE);
+                            } else {
+                                emit(JVM.IASTORE);
+                            }
+                            ++pos;
+                            if (!elAST.EL.isEmptyExprList())
+                                elAST = (ExprList) elAST.EL;
+                            else
+                                break;
+                        }
+
+                        // vAST.E.visit(this, frame);
                     }
+                    emitPUTSTATICARRAY(T, vAST.I.spelling);
                 }
             }
 
@@ -216,7 +205,7 @@ public final class Emitter implements Visitor {
                 emit(JVM.VAR, "0 is this L" + classname + "; from "
                         + (String) frame.scopeStart.peek() + " to "
                         + (String) frame.scopeEnd.peek());
-                ((FuncDecl) ast.parent).PL.visit(this, o); 
+                ((FuncDecl) ast.parent).PL.visit(this, o);
             }
         }
         ast.DL.visit(this, o);
@@ -618,7 +607,7 @@ public final class Emitter implements Visitor {
     public Object visitArrayExpr(ArrayExpr ast, Object o) {
         Frame frame = (Frame) o;
         Type tAST1 = (Type) ast.V.visit(this, o);
-        
+
         if (tAST1.isArrayType()) {
             tAST1 = ((ArrayType) tAST1).T;
         }
@@ -676,9 +665,9 @@ public final class Emitter implements Visitor {
             Decl decl = (Decl) vAST.I.decl;
 
             ast.E2.visit(this, o);
-            if (ast.parent instanceof AssignExpr) {
-                emit(JVM.DUP_x2);
-            }
+            // if (ast.parent instanceof AssignExpr) {
+            emit(JVM.DUP_x2);
+            // }
             if (aAST.E.type.assignable(ast.E2.type)
                     && !aAST.E.type.equals(ast.E2.type)) {
                 emit(JVM.I2F);
@@ -861,40 +850,34 @@ public final class Emitter implements Visitor {
             emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " [" + T
                     + " from " + (String) frame.scopeStart.peek() + " to "
                     + (String) frame.scopeEnd.peek());
+          
+            tAST.E.visit(this, frame);
+            emit(JVM.NEWARRAY, tAST.T.toString());
 
             if (!ast.E.isEmptyExpr()) {
-                ast.E.visit(this, o);
-                emit(JVM.NEWARRAY + tAST.T.toString());
-                emitASTORE(ast.I);
-            }else{
-//                if (tAST.T.equals(StdEnvironment.floatType))
-//                    emit(JVM.FCONST_0);
-//                else
-//                    emit(JVM.ICONST_0);
-
-                tAST.E.visit(this, frame);
-                emit(JVM.NEWARRAY, tAST.T.toString());
-
                 int pos = 0;
-                
-//                ExprList elAST = (ExprList) ((InitExpr) ast.E).IL;
-//                while (!elAST.isEmptyExprList()) {
-//                    emit(JVM.DUP);
-//                    if (pos >= 0 && pos <= 5) {
-//                        emit(JVM.ICONST + "_" + pos);
-//                    } else
-//                        emit(JVM.ICONST, pos);
-//                    elAST.E.visit(this, o);
-//                    if (tAST.T.equals(StdEnvironment.floatType)) {
-//                        emit(JVM.FASTORE);
-//                    } else if (ast.T.equals(StdEnvironment.intType)) {
-//                        emit(JVM.IASTORE);
-//                    } else if (ast.T.equals(StdEnvironment.booleanType)) {
-//                        emit(JVM.BASTORE);
-//                    }
-//                    ++pos;
-//                    elAST = (ExprList) elAST.EL;
-//                }
+                ExprList elAST = (ExprList) ((InitExpr) ast.E).IL;
+
+                while (!elAST.isEmptyExprList()) {
+                    emit(JVM.DUP);
+                    if (pos >= 0 && pos <= 5) {
+                        emit(JVM.ICONST + "_" + pos);
+                    } else
+                        emit(JVM.ICONST, pos);
+                    
+                    elAST.E.visit(this, o);
+                    
+                    if (tAST.T.equals(StdEnvironment.floatType)) {
+                        emit(JVM.FASTORE);
+                    } else  {
+                        emit(JVM.IASTORE);
+                    } 
+                    ++pos;
+                    if (!elAST.EL.isEmptyExprList())
+                        elAST = (ExprList) elAST.EL;
+                    else
+                        break;
+                }
 
                 if (ast.index >= 0 && ast.index <= 3)
                     emit(JVM.ASTORE + "_" + ast.index);
@@ -925,7 +908,7 @@ public final class Emitter implements Visitor {
                     + " from " + (String) frame.scopeStart.peek() + " to "
                     + (String) frame.scopeEnd.peek());
         } else {
-            T = VCtoJavaType(((ArrayType)ast.T).T);
+            T = VCtoJavaType(((ArrayType) ast.T).T);
             emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " [" + T
                     + " from " + (String) frame.scopeStart.peek() + " to "
                     + (String) frame.scopeEnd.peek());

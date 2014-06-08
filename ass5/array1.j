@@ -32,7 +32,7 @@
 	
 	; set limits used by this method
 .limit locals 1
-.limit stack 2
+.limit stack 0
 .end method
 .method foo2([I[F)I
 L0:
@@ -46,7 +46,7 @@ L1:
 	
 	; set limits used by this method
 .limit locals 3
-.limit stack 3
+.limit stack 1
 .end method
 .method public static main([Ljava/lang/String;)V
 L0:
@@ -79,6 +79,7 @@ L0:
 	iaload
 	dup_x2
 	iastore
+	dup_x2
 	iastore
 	pop
 	aload_1
