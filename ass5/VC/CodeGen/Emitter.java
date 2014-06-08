@@ -618,12 +618,13 @@ public final class Emitter implements Visitor {
     public Object visitArrayExpr(ArrayExpr ast, Object o) {
         Frame frame = (Frame) o;
         Type tAST1 = (Type) ast.V.visit(this, o);
-
+        
         if (tAST1.isArrayType()) {
             tAST1 = ((ArrayType) tAST1).T;
         }
 
         Type tAST2 = (Type) ast.E.visit(this, o);
+        emit(JVM.IALOAD);
         ast.type = tAST1;
         return tAST1;
     }
