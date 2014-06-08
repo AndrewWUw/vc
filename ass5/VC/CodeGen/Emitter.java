@@ -112,7 +112,7 @@ public final class Emitter implements Visitor {
 
                     if (!vAST.E.isEmptyExpr()) {
                         tAST.E.visit(this, frame);
-                        emit(JVM.NEWARRAY, T);
+                        emit(JVM.NEWARRAY, tAST.T.toString());
                         emitPUTSTATICARRAY(T, vAST.I.spelling);
 
                     } else {
@@ -122,7 +122,7 @@ public final class Emitter implements Visitor {
                             emit(JVM.ICONST_0);
 
                         tAST.E.visit(this, frame);
-                        emit(JVM.NEWARRAY, T);
+                        emit(JVM.NEWARRAY, tAST.T.toString());
 
                         int pos = 0;
                         //
