@@ -1,0 +1,14 @@
+int main() {
+    int first, second;
+    float firstf = 0;
+    float div;
+    putStringLn("Enter two integers");
+    first = getInt();
+    firstf = first;
+    second = getInt();
+    
+    div = first / second;
+    putFloatLn(div);
+    div = firstf / second;
+    putFloatLn(div);
+}

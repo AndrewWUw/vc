@@ -1,0 +1,16 @@
+int main() {
+    int c, n, fact = 1;
+ 
+    putString("Enter a number to calculate it's factorial\n");
+    n = getInt();
+     
+    for (c = 1; c <= n; c = c + 1)
+      fact = fact * c;
+     
+    putString("Factorial of ");
+    putInt(n);
+    putString(" = ");
+    putIntLn(fact);
+     
+    return 0;
+}

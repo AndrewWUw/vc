@@ -1,0 +1,17 @@
+int main() {
+    while (true) {
+        continue;
+    }
+    while (1 == 1) {
+        break;
+    }
+    while (false || true) {
+        while (3 > 2) {
+            if (true) {
+                break;
+            } else {
+                continue;
+            }
+        }
+    }
+}

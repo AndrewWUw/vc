@@ -71,17 +71,15 @@ L0:
 	dup
 	invokenonvirtual gcd/<init>()V
 	astore_1
-	iload_0
+	getstatic gcd/i I
 	invokestatic VC/lang/System.getInt()I
-	dup
-	putstatic gcd/i int
-	iload_0
+	putstatic gcd/i I
+	getstatic gcd/j I
 	invokestatic VC/lang/System.getInt()I
-	dup
-	putstatic gcd/j int
+	putstatic gcd/j I
 	aload_1
-	iload_0
-	iload_0
+	getstatic gcd/i I
+	getstatic gcd/j I
 	invokevirtual gcd/gcd(II)I
 	invokestatic VC/lang/System/putIntLn(I)V
 L1:

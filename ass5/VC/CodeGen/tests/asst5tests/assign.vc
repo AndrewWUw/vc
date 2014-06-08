@@ -1,0 +1,10 @@
+int main() {
+    int i = 1;
+    float f = 1.0;
+    i = 2;
+    i = i = 3;
+    f = 2.0;
+    f = f = 3.0;
+    i = i;
+    i = i = i;
+}

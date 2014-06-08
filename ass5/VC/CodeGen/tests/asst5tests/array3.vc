@@ -1,0 +1,7 @@
+int main() {
+int b[] = {2,4,6};
+   
+   int c;
+   c = b[2] = 8;
+   putIntLn(b[2]);
+}

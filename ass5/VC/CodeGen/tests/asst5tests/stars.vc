@@ -1,0 +1,24 @@
+int main()
+{
+   int row, c, n, temp;
+ 
+   putString("Enter the number of rows in pyramid of stars you wish to see ");
+   n = getInt();
+ 
+   temp = n;
+ 
+   for ( row = 1 ; row <= n ; row = row + 1 )
+   {
+      for ( c = 1 ; c < temp ; c = c + 1 )
+         putString(" ");
+ 
+      temp = temp - 1;
+ 
+      for ( c = 1 ; c <= 2*row - 1 ; c = c + 1 )
+         putString("*");
+ 
+      putString("\n");
+   }
+ 
+   return 0;
+}

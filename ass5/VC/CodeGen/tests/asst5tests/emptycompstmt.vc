@@ -1,0 +1,10 @@
+int foo() {
+}
+int bar() {
+    ;
+}
+int yolo(int i) {
+
+}
+int main() {
+}

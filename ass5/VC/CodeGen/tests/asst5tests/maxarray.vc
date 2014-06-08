@@ -1,0 +1,29 @@
+int main()
+{
+  int array[100], maximum, size, c, location = 1;
+ 
+  putString("Enter the number of elements in array\n");
+  size = getInt();
+ 
+  putString("Enter integers\n");
+ 
+  for (c = 0; c < size; c = c + 1)
+    array[c] = getInt();
+ 
+  maximum = array[0];
+ 
+  for (c = 1; c < size; c = c + 1)
+  {
+    if (array[c] > maximum)
+    {
+       maximum  = array[c];
+       location = c+1;
+    }
+  }
+ 
+  putString("Maximum element is present at location ");
+  putInt(location); 
+  putString(" and it's value is ");
+  putIntLn(maximum);
+  return 0;
+}

@@ -1,0 +1,7 @@
+int main() {
+    int i;
+    i = 1; // frame push +1 or +2 depending if you do an extra dup
+    1; // frame push +0 or +1 depending whether you discard the statement or not
+    1+1; // frame push +0 or +2 
+    for (1+1+1+1;true;1+1+1+1) {} // discard E1 and E3?
+}
