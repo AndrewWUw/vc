@@ -83,7 +83,7 @@ public final class Checker implements Visitor {
 		return localUnaryExpr;
 	}
 
-	private Expr checkAssignment(Type paramType, Expr paramExpr,
+    private Expr checkAssignment(Type paramType, Expr paramExpr,
 			String paramString, VC.Scanner.SourcePosition paramSourcePosition) {
 		if (!paramType.assignable(paramExpr.type)) {
 			this.reporter.reportError(paramString, "", paramSourcePosition);

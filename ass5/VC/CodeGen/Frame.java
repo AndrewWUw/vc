@@ -135,8 +135,7 @@ public class Frame {
 					+ currentStackSize + ".");
 			System.out.println("You wanted to pop " + i
 					+ ((i == 1) ? " operand" : " operands") + " to the stack.");
-			System.out
-					.println("The size of the operand stack is limited to the range 0 .. "
+			System.out.println("The size of the operand stack is limited to the range 0 .. "
 							+ JVM.MAX_OPSTACK + ".");
 			System.out.println("Good luck with debugging your code generator.");
 			System.exit(1);

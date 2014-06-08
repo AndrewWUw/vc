@@ -66,7 +66,8 @@ public final class JVM {
             IASTORE = "iastore",
             FASTORE = "fastore",
             BASTORE = "bastore",
-
+            DUP_x2 = "dup_x2",
+            
             // Arithmetic Instructions
             FADD = "fadd",
             IADD = "iadd",
