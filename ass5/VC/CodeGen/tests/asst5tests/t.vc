@@ -1,0 +1,6 @@
+float fs[2];
+int main() {
+  putFloatLn(fs[0]);
+  putFloatLn(fs[1]);
+  return 0;
+}

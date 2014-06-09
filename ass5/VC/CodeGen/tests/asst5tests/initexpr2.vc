@@ -14,13 +14,14 @@ int x6[] = {i = 3,i*i+i/i,i-1};
 float x7[] = {1.0,2 + 3.0,i/1.0, 1234}; 
 float x9[] = {1,i=3,3}; 
 float x92[] = {1,fa[1]}; 
-float x10[] = {x10[0]}; 
-boolean x11[] = {!x11[0] && ia[1] == fa[1]};
-float x12[] = {x12[0] = 3*3 + x12[0]}; 
+//float x10[] = {x10[0]}; 
+//boolean x11[] = {!x11[0] && ia[1] == fa[1]};
+//float x12[] = {x12[0] = 3*3 + x12[0]}; 
 int x14[] = {1, ifunc()}; 
 float x16[] = {1, ifunc()};
 float x17[] = {1, ffunc()};
 
 int main() {
+return 1;
 }
 

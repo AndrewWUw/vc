@@ -1,8 +1,9 @@
 int main() {
-    while (true) {
-        continue;
-    }
+//    while (true) {
+//        continue;
+//    }
     while (1 == 1) {
+  		putString("a");
         break;
     }
     while (false || true) {

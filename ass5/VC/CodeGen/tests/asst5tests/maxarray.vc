@@ -2,10 +2,10 @@ int main()
 {
   int array[100], maximum, size, c, location = 1;
  
-  putString("Enter the number of elements in array\n");
+//  putString("Enter the number of elements in array\n");
   size = getInt();
  
-  putString("Enter integers\n");
+//  putString("Enter integers\n");
  
   for (c = 0; c < size; c = c + 1)
     array[c] = getInt();
