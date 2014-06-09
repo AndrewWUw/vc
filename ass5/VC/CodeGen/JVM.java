@@ -69,6 +69,8 @@ public final class JVM {
             DUP_x2 = "dup_x2",
             IALOAD = "iaload",
             FALOAD = "faload",
+            BALOAD = "baload",
+            BLOAD = "bload",
             
             // Arithmetic Instructions
             FADD = "fadd",
